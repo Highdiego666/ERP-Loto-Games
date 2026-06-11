@@ -1,11 +1,11 @@
 // ============================================
-// LOTO GAMES POS - BASE DE DATOS LOCAL
+// LOTO GAMES POS - BASE DE DATOS (LOCAL + SUPABASE)
 // ============================================
 
 const DB = {
-    // Inicializar datos por defecto
+    // Inicializar datos locales por defecto
     init() {
-        // Productos iniciales
+        // Productos iniciales (local)
         if (!localStorage.getItem('productos')) {
             const productosIniciales = [
                 {
@@ -62,6 +62,16 @@ const DB = {
                     estado: "activo",
                     privilegios: [],
                     createdAt: new Date().toISOString()
+                },
+                {
+                    id: 2,
+                    nombre: "Soporte Tecnico",
+                    email: "soporte@lotogames.com",
+                    password: "soporte123",
+                    rol: "soporte",
+                    estado: "activo",
+                    privilegios: [],
+                    createdAt: new Date().toISOString()
                 }
             ];
             localStorage.setItem('usuarios', JSON.stringify(usuariosIniciales));
@@ -77,7 +87,9 @@ const DB = {
             localStorage.setItem('servicios', JSON.stringify([]));
         }
 
-        console.log('✅ Base de datos inicializada correctamente');
+        console.log('✅ Base de datos local inicializada');
+        console.log('📦 Productos:', this.getProductos().length);
+        console.log('👥 Usuarios:', this.getUsuarios().length);
     },
 
     // ========== PRODUCTOS ==========
@@ -125,18 +137,20 @@ const DB = {
         localStorage.setItem('ventas', JSON.stringify(ventas));
         
         // Actualizar stock de productos
-        venta.items.forEach(item => {
-            if (item.tipo !== 'rapida') {
-                const producto = this.getProductos().find(p => p.id == item.id);
-                if (producto) {
-                    const nuevoStock = producto.stock - item.cantidad;
-                    this.updateProducto(item.id, { stock: nuevoStock });
-                    console.log(`📦 Stock actualizado: ${producto.nombre} (${producto.stock} → ${nuevoStock})`);
+        if (venta.items) {
+            venta.items.forEach(item => {
+                if (item.tipo !== 'rapida') {
+                    const producto = this.getProductos().find(p => p.id == item.id);
+                    if (producto) {
+                        const nuevoStock = producto.stock - item.cantidad;
+                        this.updateProducto(item.id, { stock: nuevoStock });
+                        console.log(`📦 Stock actualizado: ${producto.nombre} (${producto.stock} → ${nuevoStock})`);
+                    }
                 }
-            }
-        });
+            });
+        }
         
-        console.log('✅ Venta registrada:', venta.id, 'Total: $' + venta.total);
+        console.log('✅ Venta registrada:', venta.id, 'Total: $' + (venta.total || 0));
         return venta;
     },
 
@@ -155,6 +169,7 @@ const DB = {
         usuario.createdAt = new Date().toISOString();
         usuarios.push(usuario);
         localStorage.setItem('usuarios', JSON.stringify(usuarios));
+        console.log('✅ Usuario guardado:', usuario.nombre);
         return usuario;
     },
 
@@ -164,6 +179,7 @@ const DB = {
         if (index !== -1) {
             usuarios[index] = { ...usuarios[index], ...data };
             localStorage.setItem('usuarios', JSON.stringify(usuarios));
+            console.log('✅ Usuario actualizado:', usuarios[index].nombre);
             return usuarios[index];
         }
         return null;
@@ -173,6 +189,58 @@ const DB = {
         const usuarios = this.getUsuarios();
         const nuevosUsuarios = usuarios.filter(u => u.id != id);
         localStorage.setItem('usuarios', JSON.stringify(nuevosUsuarios));
+        console.log('✅ Usuario eliminado');
+        return true;
+    },
+
+    // ========== CLIENTES ==========
+    getClientes() {
+        return JSON.parse(localStorage.getItem('clientes') || '[]');
+    },
+
+    saveCliente(cliente) {
+        const clientes = this.getClientes();
+        cliente.id = Date.now();
+        cliente.createdAt = new Date().toISOString();
+        clientes.push(cliente);
+        localStorage.setItem('clientes', JSON.stringify(clientes));
+        console.log('✅ Cliente guardado:', cliente.nombre);
+        return cliente;
+    },
+
+    // ========== SERVICIOS TÉCNICOS ==========
+    getServicios() {
+        return JSON.parse(localStorage.getItem('servicios') || '[]');
+    },
+
+    saveServicio(servicio) {
+        const servicios = this.getServicios();
+        servicio.id = Date.now();
+        servicio.createdAt = new Date().toISOString();
+        servicio.estado = servicio.estado || 'pendiente';
+        servicios.push(servicio);
+        localStorage.setItem('servicios', JSON.stringify(servicios));
+        console.log('✅ Servicio guardado:', servicio.equipo);
+        return servicio;
+    },
+
+    updateServicio(id, data) {
+        const servicios = this.getServicios();
+        const index = servicios.findIndex(s => s.id == id);
+        if (index !== -1) {
+            servicios[index] = { ...servicios[index], ...data };
+            localStorage.setItem('servicios', JSON.stringify(servicios));
+            console.log('✅ Servicio actualizado:', servicios[index].equipo);
+            return servicios[index];
+        }
+        return null;
+    },
+
+    deleteServicio(id) {
+        const servicios = this.getServicios();
+        const nuevosServicios = servicios.filter(s => s.id != id);
+        localStorage.setItem('servicios', JSON.stringify(nuevosServicios));
+        console.log('✅ Servicio eliminado');
         return true;
     },
 
@@ -198,53 +266,6 @@ const DB = {
             ventasHoy: numeroVentasHoy,
             totalVentasHoy: totalVentasHoy
         };
-    },
-
-    // ========== CLIENTES ==========
-    getClientes() {
-        return JSON.parse(localStorage.getItem('clientes') || '[]');
-    },
-
-    saveCliente(cliente) {
-        const clientes = this.getClientes();
-        cliente.id = Date.now();
-        cliente.createdAt = new Date().toISOString();
-        clientes.push(cliente);
-        localStorage.setItem('clientes', JSON.stringify(clientes));
-        return cliente;
-    },
-
-    // ========== SERVICIOS TÉCNICOS ==========
-    getServicios() {
-        return JSON.parse(localStorage.getItem('servicios') || '[]');
-    },
-
-    saveServicio(servicio) {
-        const servicios = this.getServicios();
-        servicio.id = Date.now();
-        servicio.createdAt = new Date().toISOString();
-        servicio.estado = servicio.estado || 'pendiente';
-        servicios.push(servicio);
-        localStorage.setItem('servicios', JSON.stringify(servicios));
-        return servicio;
-    },
-
-    updateServicio(id, data) {
-        const servicios = this.getServicios();
-        const index = servicios.findIndex(s => s.id == id);
-        if (index !== -1) {
-            servicios[index] = { ...servicios[index], ...data };
-            localStorage.setItem('servicios', JSON.stringify(servicios));
-            return servicios[index];
-        }
-        return null;
-    },
-
-    deleteServicio(id) {
-        const servicios = this.getServicios();
-        const nuevosServicios = servicios.filter(s => s.id != id);
-        localStorage.setItem('servicios', JSON.stringify(nuevosServicios));
-        return true;
     }
 };
 
@@ -254,8 +275,5 @@ DB.init();
 // Exponer DB globalmente
 window.DB = DB;
 
-console.log('🗄️ Base de datos lista', {
-    productos: DB.getProductos().length,
-    ventas: DB.getVentas().length,
-    usuarios: DB.getUsuarios().length
-});
+console.log('🗄️ Base de datos lista');
+console.log('📊 Estadísticas:', DB.getStats());
