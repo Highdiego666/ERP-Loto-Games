@@ -1,3 +1,4 @@
+cat > js/modules/dashboard.js << 'EOF'
 // ============================================
 // LOTO GAMES POS - DASHBOARD PRINCIPAL
 // ============================================
@@ -61,22 +62,15 @@ window.dashboardModule = () => {
     `;
 };
 
-// Función para actualizar el dashboard
 window.actualizarDashboard = async () => {
     console.log('📊 Actualizando dashboard...');
     
     try {
-        // Obtener datos
-        const [productos, ventas, servicios, clientes] = await Promise.all([
-            window.DB.getProductos(),
-            window.DB.getVentas(),
-            window.DB.getServicios(),
-            window.DB.getClientes()
-        ]);
+        const productos = await window.DB.getProductos();
+        const ventas = await window.DB.getVentas();
+        const servicios = await window.DB.getServicios();
+        const clientes = await window.DB.getClientes();
         
-        console.log(`📦 Datos cargados: ${productos.length} productos, ${ventas.length} ventas`);
-        
-        // Calcular fechas
         const hoy = new Date();
         hoy.setHours(0, 0, 0, 0);
         
@@ -84,58 +78,25 @@ window.actualizarDashboard = async () => {
         inicioSemana.setDate(inicioSemana.getDate() - inicioSemana.getDay());
         inicioSemana.setHours(0, 0, 0, 0);
         
-        const ayer = new Date();
-        ayer.setDate(ayer.getDate() - 1);
-        ayer.setHours(0, 0, 0, 0);
-        
-        // Filtrar ventas
         const ventasHoy = ventas.filter(v => new Date(v.fecha) >= hoy);
-        const totalHoy = ventasHoy.reduce((sum, v) => sum + (v.total || 0), 0);
+        const totalHoy = ventasHoy.reduce((s, v) => s + (v.total || 0), 0);
         
         const ventasSemana = ventas.filter(v => new Date(v.fecha) >= inicioSemana);
-        const totalSemana = ventasSemana.reduce((sum, v) => sum + (v.total || 0), 0);
+        const totalSemana = ventasSemana.reduce((s, v) => s + (v.total || 0), 0);
         
-        const ventasAyer = ventas.filter(v => {
-            const fecha = new Date(v.fecha);
-            return fecha >= ayer && fecha < hoy;
-        });
-        const totalAyer = ventasAyer.reduce((sum, v) => sum + (v.total || 0), 0);
+        document.getElementById('ventasHoy').innerHTML = `$${totalHoy.toLocaleString()}`;
+        document.getElementById('ventasSemana').innerHTML = `$${totalSemana.toLocaleString()}`;
+        document.getElementById('totalProductos').innerHTML = productos.length;
+        document.getElementById('serviciosPendientes').innerHTML = servicios.filter(s => s.estado === 'pendiente').length;
+        document.getElementById('clientesTotales').innerHTML = clientes.length;
         
-        // Calcular tendencia
-        let tendencia = 0;
-        if (totalAyer > 0) {
-            tendencia = ((totalHoy - totalAyer) / totalAyer * 100);
-        } else if (totalHoy > 0) {
-            tendencia = 100;
-        }
+        const stockBajo = productos.filter(p => p.stock < 5).length;
+        document.getElementById('stockBajoBadge').innerHTML = stockBajo > 0 ? `⚠️ ${stockBajo} con stock bajo` : '';
         
-        // Actualizar DOM con verificaciones de seguridad
-        const setText = (id, value) => {
-            const el = document.getElementById(id);
-            if (el) el.innerHTML = value;
-        };
-        
-        setText('ventasHoy', `$${totalHoy.toLocaleString()}`);
-        setText('ventasSemana', `$${totalSemana.toLocaleString()}`);
-        setText('totalProductos', productos.length);
-        setText('serviciosPendientes', servicios.filter(s => s.estado === 'pendiente').length);
-        setText('clientesTotales', clientes.length);
-        
-        const tendenciaEl = document.getElementById('tendenciaVentas');
-        if (tendenciaEl) {
-            tendenciaEl.innerHTML = `${tendencia >= 0 ? '+' : ''}${tendencia.toFixed(0)}% vs ayer`;
-            tendenciaEl.style.color = tendencia >= 0 ? 'var(--success)' : 'var(--danger)';
-        }
-        
-        const stockBajo = productos.filter(p => (p.stock || 0) < 5).length;
-        const stockBadge = document.getElementById('stockBajoBadge');
-        if (stockBadge) stockBadge.innerHTML = stockBajo > 0 ? `⚠️ ${stockBajo} con stock bajo` : '';
-        
-        // Producto más vendido
         const ventasProductos = {};
-        ventas.forEach(venta => {
-            if (venta.items && Array.isArray(venta.items)) {
-                venta.items.forEach(item => {
+        ventas.forEach(v => {
+            if (v.items) {
+                v.items.forEach(item => {
                     if (item.tipo !== 'rapida' && item.nombre) {
                         ventasProductos[item.nombre] = (ventasProductos[item.nombre] || 0) + (item.cantidad || 0);
                     }
@@ -143,112 +104,50 @@ window.actualizarDashboard = async () => {
             }
         });
         
-        const topProducto = Object.entries(ventasProductos).sort((a, b) => b[1] - a[1])[0];
-        const productoTopEl = document.getElementById('productoMasVendido');
-        if (productoTopEl) {
-            productoTopEl.innerHTML = topProducto ? `${topProducto[0]} (${topProducto[1]} uds)` : 'Sin ventas';
-        }
-        
-        // Gráfico de ventas
-        const ultimos7Dias = [];
-        for (let i = 6; i >= 0; i--) {
-            const fecha = new Date();
-            fecha.setDate(fecha.getDate() - i);
-            fecha.setHours(0, 0, 0, 0);
-            const fechaFin = new Date(fecha);
-            fechaFin.setDate(fechaFin.getDate() + 1);
-            
-            const totalDia = ventas.filter(v => {
-                const fechaVenta = new Date(v.fecha);
-                return fechaVenta >= fecha && fechaVenta < fechaFin;
-            }).reduce((sum, v) => sum + (v.total || 0), 0);
-            
-            ultimos7Dias.push({
-                fecha: fecha.toLocaleDateString('es-MX', { weekday: 'short' }),
-                total: totalDia
-            });
-        }
+        const top = Object.entries(ventasProductos).sort((a, b) => b[1] - a[1])[0];
+        document.getElementById('productoMasVendido').innerHTML = top ? `${top[0]} (${top[1]} uds)` : '-';
         
         const ctx = document.getElementById('ventasChart')?.getContext('2d');
         if (ctx) {
             if (window.ventasChartInstance) window.ventasChartInstance.destroy();
+            
+            const ultimos7 = [];
+            for (let i = 6; i >= 0; i--) {
+                const fecha = new Date();
+                fecha.setDate(fecha.getDate() - i);
+                fecha.setHours(0, 0, 0, 0);
+                const total = ventas.filter(v => new Date(v.fecha) >= fecha && new Date(v.fecha) < new Date(fecha.getTime() + 86400000))
+                    .reduce((s, v) => s + (v.total || 0), 0);
+                ultimos7.push({ fecha: fecha.toLocaleDateString('es-MX', { weekday: 'short' }), total });
+            }
+            
             window.ventasChartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: ultimos7Dias.map(d => d.fecha),
-                    datasets: [{
-                        label: 'Ventas ($)',
-                        data: ultimos7Dias.map(d => d.total),
-                        borderColor: '#6366f1',
-                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                        borderWidth: 2,
-                        tension: 0.4,
-                        fill: true,
-                        pointBackgroundColor: '#6366f1',
-                        pointBorderColor: '#fff',
-                        pointRadius: 4
-                    }]
+                    labels: ultimos7.map(d => d.fecha),
+                    datasets: [{ label: 'Ventas', data: ultimos7.map(d => d.total), borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.1)', fill: true, tension: 0.4 }]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: { labels: { color: '#94a3b8' } },
-                        tooltip: { callbacks: { label: (ctx) => `$${ctx.raw.toLocaleString()}` } }
-                    },
-                    scales: {
-                        y: { 
-                            ticks: { color: '#94a3b8', callback: (v) => `$${v.toLocaleString()}` },
-                            grid: { color: '#334155' }
-                        },
-                        x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } }
-                    }
-                }
+                options: { responsive: true, plugins: { legend: { labels: { color: '#94a3b8' } } }, scales: { y: { ticks: { color: '#94a3b8' } }, x: { ticks: { color: '#94a3b8' } } } }
             });
         }
         
-        // Top 5 productos
         const top5 = Object.entries(ventasProductos).sort((a, b) => b[1] - a[1]).slice(0, 5);
         const topContainer = document.getElementById('topProductos');
         if (topContainer) {
-            if (top5.length === 0) {
-                topContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted);">No hay ventas registradas</p>';
-            } else {
-                topContainer.innerHTML = top5.map(([nombre, cantidad], i) => `
-                    <div style="display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid var(--border);">
-                        <span><strong>${i + 1}.</strong> ${nombre}</span>
-                        <span style="color: var(--success); font-weight: bold;">${cantidad} unidades</span>
-                    </div>
-                `).join('');
-            }
+            topContainer.innerHTML = top5.length ? top5.map(([n, c], i) => `<div style="display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid var(--border)"><span><strong>${i+1}.</strong> ${n}</span><span style="color:var(--success)">${c} uds</span></div>`).join('') : '<p style="text-align:center">Sin ventas</p>';
         }
         
-        // Actividad reciente
-        const ultimasVentas = [...ventas].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).slice(0, 10);
-        const activityContainer = document.getElementById('actividadReciente');
-        if (activityContainer) {
-            if (ultimasVentas.length === 0) {
-                activityContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted);">No hay actividad reciente</p>';
-            } else {
-                activityContainer.innerHTML = ultimasVentas.map(v => `
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border);">
-                        <div>
-                            <i class="fas fa-shopping-cart" style="color: var(--primary);"></i>
-                            <strong> Venta #${v.id}</strong>
-                        </div>
-                        <div style="color: var(--success); font-weight: bold;">$${(v.total || 0).toLocaleString()}</div>
-                        <div style="color: var(--text-muted); font-size: 12px;">${new Date(v.fecha).toLocaleString()}</div>
-                    </div>
-                `).join('');
-            }
+        const recent = [...ventas].sort((a,b) => new Date(b.fecha) - new Date(a.fecha)).slice(0,10);
+        const actContainer = document.getElementById('actividadReciente');
+        if (actContainer) {
+            actContainer.innerHTML = recent.length ? recent.map(v => `<div style="display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid var(--border)"><div><i class="fas fa-shopping-cart"></i> Venta #${v.id}</div><div>$${(v.total||0).toLocaleString()}</div><div style="font-size:12px">${new Date(v.fecha).toLocaleString()}</div></div>`).join('') : '<p style="text-align:center">Sin actividad</p>';
         }
         
-        console.log('✅ Dashboard actualizado correctamente');
-        
-    } catch (error) {
-        console.error('❌ Error al actualizar dashboard:', error);
+        console.log('✅ Dashboard actualizado');
+    } catch(e) {
+        console.error('Error en dashboard:', e);
     }
 };
 
-// Inicializar
-console.log('📊 Módulo Dashboard cargado');
+console.log('📊 Módulo Dashboard listo');
+EOF

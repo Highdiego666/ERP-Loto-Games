@@ -3,22 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <meta name="description" content="LOTO GAMES POS - Sistema de punto de venta profesional para tienda de videojuegos">
+    <meta name="author" content="LOTO GAMES">
     <title>LOTO GAMES POS - Sistema Profesional</title>
     
-    <!-- Font Awesome -->
+    <!-- Font Awesome 6 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- Chart.js -->
+    <!-- Chart.js para gráficos -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     
-    <!-- JsBarcode -->
+    <!-- JsBarcode para códigos de barras -->
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
     
-    <!-- Estilos -->
+    <!-- Estilos principales -->
     <link rel="stylesheet" href="css/style.css">
+    
+    <style>
+        /* Estilos adicionales de respaldo */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+        .error-module {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        .error-module i {
+            font-size: 48px;
+            color: var(--danger);
+            margin-bottom: 20px;
+        }
+    </style>
 </head>
 <body>
     <div class="app-container">
@@ -73,8 +96,8 @@
                 <div class="user-info-sidebar">
                     <i class="fas fa-user-circle"></i>
                     <div>
-                        <div class="user-name">Administrador</div>
-                        <div class="user-role">Admin</div>
+                        <div class="user-name" id="userNameSidebar">Administrador</div>
+                        <div class="user-role" id="userRoleSidebar">Admin</div>
                     </div>
                 </div>
             </div>
@@ -94,13 +117,16 @@
                     </div>
                     <div class="notifications">
                         <i class="far fa-bell"></i>
-                        <span class="badge">3</span>
+                        <span class="badge" id="notificationBadge">0</span>
                     </div>
                 </div>
             </header>
             
             <div id="content" class="content-area">
-                <!-- Contenido dinámico -->
+                <div class="loading">
+                    <i class="fas fa-spinner fa-pulse fa-2x"></i>
+                    <p>Cargando sistema...</p>
+                </div>
             </div>
         </main>
     </div>
@@ -112,9 +138,13 @@
     <script src="js/supabase-client.js"></script>
     
     <!-- ============================================ -->
-    <!-- MÓDULOS DEL SISTEMA                          -->
+    <!-- BASE DE DATOS Y UTILERÍAS                    -->
     <!-- ============================================ -->
     <script src="js/utils/database.js"></script>
+    
+    <!-- ============================================ -->
+    <!-- MÓDULOS DEL SISTEMA                          -->
+    <!-- ============================================ -->
     <script src="js/modules/dashboard.js"></script>
     <script src="js/modules/ventas.js"></script>
     <script src="js/modules/productos.js"></script>
@@ -124,18 +154,45 @@
     <script src="js/modules/usuarios.js"></script>
     <script src="js/modules/reportes.js"></script>
     
-    <!-- App principal -->
+    <!-- ============================================ -->
+    <!-- APLICACIÓN PRINCIPAL                         -->
+    <!-- ============================================ -->
     <script src="js/app.js"></script>
     
-    <!-- Verificar conexión -->
+    <!-- ============================================ -->
+    <!-- VERIFICACIÓN DE CARGA                        -->
+    <!-- ============================================ -->
     <script>
-        setTimeout(() => {
-            if (window.supabase) {
-                console.log("🚀 Sistema listo con Supabase");
-            } else {
-                console.warn("⚠️ Supabase no conectado");
+        (function verificarCarga() {
+            const startTime = Date.now();
+            
+            function checkModules() {
+                const modules = {
+                    'dashboard': typeof window.dashboardModule,
+                    'ventas': typeof window.ventasModule,
+                    'productos': typeof window.productosModule,
+                    'inventario': typeof window.inventarioModule,
+                    'servicios': typeof window.serviciosModule,
+                    'clientes': typeof window.clientesModule,
+                    'usuarios': typeof window.usuariosModule,
+                    'reportes': typeof window.reportesModule
+                };
+                
+                const allLoaded = Object.values(modules).every(t => t === 'function');
+                const elapsed = Date.now() - startTime;
+                
+                if (allLoaded) {
+                    console.log('✅ Todos los módulos cargados en', elapsed, 'ms');
+                    console.log('📦 Módulos:', modules);
+                } else {
+                    const missing = Object.entries(modules).filter(([k, v]) => v !== 'function').map(([k]) => k);
+                    console.warn('⚠️ Módulos faltantes:', missing);
+                    setTimeout(checkModules, 500);
+                }
             }
-        }, 500);
+            
+            setTimeout(checkModules, 1000);
+        })();
     </script>
 </body>
 </html>
