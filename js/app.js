@@ -3,14 +3,13 @@ console.log('🚀 LOTO GAMES POS - Iniciando...');
 const content = document.getElementById('content');
 let currentModule = 'dashboard';
 
-function loadModule(moduleName) {
+async function loadModule(moduleName) {
     currentModule = moduleName;
     const moduleFunction = window[`${moduleName}Module`];
     
     if (typeof moduleFunction === 'function') {
         content.innerHTML = moduleFunction();
         
-        // Actualizar título
         const titles = {
             dashboard: 'Dashboard',
             ventas: 'Punto de Venta',
@@ -24,28 +23,21 @@ function loadModule(moduleName) {
         
         document.getElementById('pageTitle').innerText = titles[moduleName] || moduleName;
         
-        // Cargar datos específicos del módulo
-        setTimeout(() => {
+        setTimeout(async () => {
             if (moduleName === 'dashboard' && window.actualizarDashboard) {
                 window.actualizarDashboard();
             } else if (moduleName === 'productos' && window.cargarProductos) {
-                window.cargarProductos();
+                await window.cargarProductos();
             } else if (moduleName === 'ventas' && window.cargarProductosVenta) {
-                window.cargarProductosVenta();
+                await window.cargarProductosVenta();
             } else if (moduleName === 'usuarios' && window.cargarUsuarios) {
-                window.cargarUsuarios();
+                await window.cargarUsuarios();
             }
         }, 100);
     } else {
-        content.innerHTML = `
-            <div class="table-container">
-                <h3>Módulo no disponible</h3>
-                <p style="color: var(--text-muted);">El módulo ${moduleName} está en construcción</p>
-            </div>
-        `;
+        content.innerHTML = `<div class="table-container"><h3>Módulo en construcción</h3></div>`;
     }
     
-    // Actualizar navegación activa
     document.querySelectorAll('.nav-item').forEach(item => {
         item.classList.remove('active');
         if (item.dataset.module === moduleName) {
@@ -64,10 +56,9 @@ document.querySelectorAll('.nav-item').forEach(item => {
 
 // Fecha actual
 function updateDateTime() {
-    const now = new Date();
     const dateElement = document.getElementById('currentDate');
     if (dateElement) {
-        dateElement.innerText = now.toLocaleDateString('es-MX', {
+        dateElement.innerText = new Date().toLocaleDateString('es-MX', {
             weekday: 'long',
             year: 'numeric',
             month: 'long',
@@ -76,10 +67,8 @@ function updateDateTime() {
     }
 }
 
-// Inicializar
 updateDateTime();
 setInterval(updateDateTime, 60000);
 loadModule('dashboard');
 
-console.log('✅ Sistema listo');
-
+console.log('✅ Sistema listo con Supabase');

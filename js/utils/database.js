@@ -1,253 +1,245 @@
 // ============================================
-// LOTO GAMES POS - BASE DE DATOS (LOCAL + SUPABASE)
+// LOTO GAMES POS - BASE DE DATOS CON SUPABASE
 // ============================================
 
 const DB = {
-    // Inicializar datos locales por defecto
-    init() {
-        // Productos iniciales (local)
-        if (!localStorage.getItem('productos')) {
-            const productosIniciales = [
-                {
-                    id: 1,
-                    nombre: "PlayStation 5",
-                    sku: "LOT-PS5-001",
-                    codigoBarras: "750100000001",
-                    categoria: "consolas",
-                    tipo: "nueva",
-                    precio: 12500,
-                    stock: 5,
-                    createdAt: new Date().toISOString()
-                },
-                {
-                    id: 2,
-                    nombre: "Xbox Series X",
-                    sku: "LOT-XBX-002",
-                    codigoBarras: "750100000002",
-                    categoria: "consolas",
-                    tipo: "nueva",
-                    precio: 11800,
-                    stock: 3,
-                    createdAt: new Date().toISOString()
-                },
-                {
-                    id: 3,
-                    nombre: "Control DualSense",
-                    sku: "LOT-CTR-003",
-                    codigoBarras: "750100000003",
-                    categoria: "accesorios",
-                    tipo: "nueva",
-                    precio: 1500,
-                    stock: 12,
-                    createdAt: new Date().toISOString()
-                }
-            ];
-            localStorage.setItem('productos', JSON.stringify(productosIniciales));
-        }
-
-        // Ventas iniciales
-        if (!localStorage.getItem('ventas')) {
-            localStorage.setItem('ventas', JSON.stringify([]));
-        }
-
-        // Usuarios iniciales
-        if (!localStorage.getItem('usuarios')) {
-            const usuariosIniciales = [
-                {
-                    id: 1,
-                    nombre: "Administrador",
-                    email: "admin@lotogames.com",
-                    password: "admin123",
-                    rol: "admin",
-                    estado: "activo",
-                    privilegios: [],
-                    createdAt: new Date().toISOString()
-                },
-                {
-                    id: 2,
-                    nombre: "Soporte Tecnico",
-                    email: "soporte@lotogames.com",
-                    password: "soporte123",
-                    rol: "soporte",
-                    estado: "activo",
-                    privilegios: [],
-                    createdAt: new Date().toISOString()
-                }
-            ];
-            localStorage.setItem('usuarios', JSON.stringify(usuariosIniciales));
-        }
-
-        // Clientes iniciales
-        if (!localStorage.getItem('clientes')) {
-            localStorage.setItem('clientes', JSON.stringify([]));
-        }
-
-        // Servicios iniciales
-        if (!localStorage.getItem('servicios')) {
-            localStorage.setItem('servicios', JSON.stringify([]));
-        }
-
-        console.log('✅ Base de datos local inicializada');
-        console.log('📦 Productos:', this.getProductos().length);
-        console.log('👥 Usuarios:', this.getUsuarios().length);
-    },
-
     // ========== PRODUCTOS ==========
-    getProductos() {
-        return JSON.parse(localStorage.getItem('productos') || '[]');
-    },
-
-    saveProducto(producto) {
-        const productos = this.getProductos();
-        producto.id = Date.now();
-        producto.createdAt = new Date().toISOString();
-        productos.push(producto);
-        localStorage.setItem('productos', JSON.stringify(productos));
-        console.log('✅ Producto guardado:', producto.nombre);
-        return producto;
-    },
-
-    updateProducto(id, data) {
-        const productos = this.getProductos();
-        const index = productos.findIndex(p => p.id == id);
-        if (index !== -1) {
-            productos[index] = { ...productos[index], ...data };
-            localStorage.setItem('productos', JSON.stringify(productos));
-            console.log('✅ Producto actualizado:', productos[index].nombre);
-            return productos[index];
+    async getProductos() {
+        const { data, error } = await window.supabase
+            .from('productos')
+            .select('*')
+            .order('id', { ascending: false });
+        
+        if (error) {
+            console.error('Error al cargar productos:', error);
+            return [];
         }
-        return null;
+        return data || [];
     },
 
-    deleteProducto(id) {
-        const productos = this.getProductos();
-        const productoEliminado = productos.find(p => p.id == id);
-        const nuevosProductos = productos.filter(p => p.id != id);
-        localStorage.setItem('productos', JSON.stringify(nuevosProductos));
-        console.log('✅ Producto eliminado:', productoEliminado?.nombre);
+    async saveProducto(producto) {
+        const { data, error } = await window.supabase
+            .from('productos')
+            .insert([{
+                nombre: producto.nombre,
+                sku: producto.sku,
+                codigo_barras: producto.codigoBarras,
+                categoria: producto.categoria,
+                tipo: producto.tipo,
+                precio: producto.precio,
+                stock: producto.stock
+            }])
+            .select();
+        
+        if (error) {
+            console.error('Error al guardar producto:', error);
+            alert('Error: ' + error.message);
+            return null;
+        }
+        console.log('✅ Producto guardado en Supabase');
+        return data[0];
+    },
+
+    async updateProducto(id, data) {
+        const { error } = await window.supabase
+            .from('productos')
+            .update(data)
+            .eq('id', id);
+        
+        if (error) {
+            console.error('Error al actualizar:', error);
+            return false;
+        }
+        console.log('✅ Producto actualizado');
+        return true;
+    },
+
+    async deleteProducto(id) {
+        const { error } = await window.supabase
+            .from('productos')
+            .delete()
+            .eq('id', id);
+        
+        if (error) {
+            console.error('Error al eliminar:', error);
+            return false;
+        }
+        console.log('✅ Producto eliminado');
         return true;
     },
 
     // ========== VENTAS ==========
-    registrarVenta(venta) {
-        const ventas = this.getVentas();
-        venta.id = Date.now();
-        venta.fecha = new Date().toISOString();
-        ventas.push(venta);
-        localStorage.setItem('ventas', JSON.stringify(ventas));
+    async registrarVenta(venta) {
+        const { data, error } = await window.supabase
+            .from('ventas')
+            .insert([{
+                items: venta.items,
+                subtotal: venta.subtotal,
+                iva: venta.iva,
+                total: venta.total,
+                metodo_pago: venta.metodoPago,
+                comentario: venta.comentario || '',
+                fecha: new Date().toISOString()
+            }])
+            .select();
+        
+        if (error) {
+            console.error('Error al registrar venta:', error);
+            alert('Error al registrar venta: ' + error.message);
+            return null;
+        }
         
         // Actualizar stock de productos
         if (venta.items) {
-            venta.items.forEach(item => {
+            for (const item of venta.items) {
                 if (item.tipo !== 'rapida') {
-                    const producto = this.getProductos().find(p => p.id == item.id);
+                    const { data: producto } = await window.supabase
+                        .from('productos')
+                        .select('stock')
+                        .eq('id', item.id)
+                        .single();
+                    
                     if (producto) {
-                        const nuevoStock = producto.stock - item.cantidad;
-                        this.updateProducto(item.id, { stock: nuevoStock });
-                        console.log(`📦 Stock actualizado: ${producto.nombre} (${producto.stock} → ${nuevoStock})`);
+                        await this.updateProducto(item.id, { 
+                            stock: producto.stock - item.cantidad 
+                        });
                     }
                 }
-            });
+            }
         }
         
-        console.log('✅ Venta registrada:', venta.id, 'Total: $' + (venta.total || 0));
-        return venta;
+        console.log('✅ Venta registrada en Supabase');
+        return data[0];
     },
 
-    getVentas() {
-        return JSON.parse(localStorage.getItem('ventas') || '[]');
+    async getVentas() {
+        const { data, error } = await window.supabase
+            .from('ventas')
+            .select('*')
+            .order('fecha', { ascending: false });
+        
+        if (error) {
+            console.error('Error al cargar ventas:', error);
+            return [];
+        }
+        return data || [];
     },
 
     // ========== USUARIOS ==========
-    getUsuarios() {
-        return JSON.parse(localStorage.getItem('usuarios') || '[]');
-    },
-
-    saveUsuario(usuario) {
-        const usuarios = this.getUsuarios();
-        usuario.id = Date.now();
-        usuario.createdAt = new Date().toISOString();
-        usuarios.push(usuario);
-        localStorage.setItem('usuarios', JSON.stringify(usuarios));
-        console.log('✅ Usuario guardado:', usuario.nombre);
-        return usuario;
-    },
-
-    updateUsuario(id, data) {
-        const usuarios = this.getUsuarios();
-        const index = usuarios.findIndex(u => u.id == id);
-        if (index !== -1) {
-            usuarios[index] = { ...usuarios[index], ...data };
-            localStorage.setItem('usuarios', JSON.stringify(usuarios));
-            console.log('✅ Usuario actualizado:', usuarios[index].nombre);
-            return usuarios[index];
+    async getUsuarios() {
+        const { data, error } = await window.supabase
+            .from('usuarios')
+            .select('*');
+        
+        if (error) {
+            console.error('Error al cargar usuarios:', error);
+            return [];
         }
-        return null;
+        return data || [];
     },
 
-    deleteUsuario(id) {
-        const usuarios = this.getUsuarios();
-        const nuevosUsuarios = usuarios.filter(u => u.id != id);
-        localStorage.setItem('usuarios', JSON.stringify(nuevosUsuarios));
-        console.log('✅ Usuario eliminado');
-        return true;
+    async saveUsuario(usuario) {
+        const { data, error } = await window.supabase
+            .from('usuarios')
+            .insert([{
+                nombre: usuario.nombre,
+                email: usuario.email,
+                password: usuario.password,
+                rol: usuario.rol,
+                estado: usuario.estado,
+                privilegios: usuario.privilegios || []
+            }])
+            .select();
+        
+        if (error) {
+            console.error('Error al guardar usuario:', error);
+            return null;
+        }
+        return data[0];
+    },
+
+    async updateUsuario(id, data) {
+        const { error } = await window.supabase
+            .from('usuarios')
+            .update(data)
+            .eq('id', id);
+        
+        if (error) console.error('Error al actualizar usuario:', error);
+        return !error;
+    },
+
+    async deleteUsuario(id) {
+        const { error } = await window.supabase
+            .from('usuarios')
+            .delete()
+            .eq('id', id);
+        
+        if (error) console.error('Error al eliminar usuario:', error);
+        return !error;
     },
 
     // ========== CLIENTES ==========
-    getClientes() {
-        return JSON.parse(localStorage.getItem('clientes') || '[]');
+    async getClientes() {
+        const { data, error } = await window.supabase
+            .from('clientes')
+            .select('*');
+        
+        if (error) return [];
+        return data || [];
     },
 
-    saveCliente(cliente) {
-        const clientes = this.getClientes();
-        cliente.id = Date.now();
-        cliente.createdAt = new Date().toISOString();
-        clientes.push(cliente);
-        localStorage.setItem('clientes', JSON.stringify(clientes));
-        console.log('✅ Cliente guardado:', cliente.nombre);
-        return cliente;
+    async saveCliente(cliente) {
+        const { data, error } = await window.supabase
+            .from('clientes')
+            .insert([cliente])
+            .select();
+        
+        if (error) return null;
+        return data[0];
     },
 
-    // ========== SERVICIOS TÉCNICOS ==========
-    getServicios() {
-        return JSON.parse(localStorage.getItem('servicios') || '[]');
+    // ========== SERVICIOS ==========
+    async getServicios() {
+        const { data, error } = await window.supabase
+            .from('servicios_tecnicos')
+            .select('*');
+        
+        if (error) return [];
+        return data || [];
     },
 
-    saveServicio(servicio) {
-        const servicios = this.getServicios();
-        servicio.id = Date.now();
-        servicio.createdAt = new Date().toISOString();
-        servicio.estado = servicio.estado || 'pendiente';
-        servicios.push(servicio);
-        localStorage.setItem('servicios', JSON.stringify(servicios));
-        console.log('✅ Servicio guardado:', servicio.equipo);
-        return servicio;
+    async saveServicio(servicio) {
+        const { data, error } = await window.supabase
+            .from('servicios_tecnicos')
+            .insert([servicio])
+            .select();
+        
+        if (error) return null;
+        return data[0];
     },
 
-    updateServicio(id, data) {
-        const servicios = this.getServicios();
-        const index = servicios.findIndex(s => s.id == id);
-        if (index !== -1) {
-            servicios[index] = { ...servicios[index], ...data };
-            localStorage.setItem('servicios', JSON.stringify(servicios));
-            console.log('✅ Servicio actualizado:', servicios[index].equipo);
-            return servicios[index];
-        }
-        return null;
+    async updateServicio(id, data) {
+        const { error } = await window.supabase
+            .from('servicios_tecnicos')
+            .update(data)
+            .eq('id', id);
+        
+        return !error;
     },
 
-    deleteServicio(id) {
-        const servicios = this.getServicios();
-        const nuevosServicios = servicios.filter(s => s.id != id);
-        localStorage.setItem('servicios', JSON.stringify(nuevosServicios));
-        console.log('✅ Servicio eliminado');
-        return true;
+    async deleteServicio(id) {
+        const { error } = await window.supabase
+            .from('servicios_tecnicos')
+            .delete()
+            .eq('id', id);
+        
+        return !error;
     },
 
     // ========== ESTADÍSTICAS ==========
-    getStats() {
-        const productos = this.getProductos();
-        const ventas = this.getVentas();
+    async getStats() {
+        const productos = await this.getProductos();
+        const ventas = await this.getVentas();
         
         const hoy = new Date();
         hoy.setHours(0, 0, 0, 0);
@@ -266,14 +258,33 @@ const DB = {
             ventasHoy: numeroVentasHoy,
             totalVentasHoy: totalVentasHoy
         };
+    },
+
+    // ========== SINCRONIZACIÓN ==========
+    async sincronizar() {
+        console.log('🔄 Sincronizando con Supabase...');
+        const productos = await this.getProductos();
+        const ventas = await this.getVentas();
+        console.log(`📦 ${productos.length} productos, 🛒 ${ventas.length} ventas`);
+        return { productos, ventas };
     }
 };
 
-// Inicializar la base de datos
-DB.init();
+// Inicializar y verificar conexión
+(async () => {
+    console.log('🗄️ Conectando a Supabase...');
+    if (window.supabase) {
+        const { data, error } = await window.supabase.from('productos').select('count');
+        if (!error) {
+            console.log('✅ Conexión con Supabase exitosa');
+            const stats = await DB.getStats();
+            console.log('📊 Estadísticas:', stats);
+        } else {
+            console.error('❌ Error de conexión con Supabase:', error);
+        }
+    } else {
+        console.error('❌ Supabase no está disponible');
+    }
+})();
 
-// Exponer DB globalmente
 window.DB = DB;
-
-console.log('🗄️ Base de datos lista');
-console.log('📊 Estadísticas:', DB.getStats());

@@ -1,3 +1,6 @@
+// Variables globales
+let productosData = [];
+
 window.productosModule = () => `
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
     <div>
@@ -36,7 +39,7 @@ window.productosModule = () => `
           </tr>
         </thead>
         <tbody id="tablaProductos">
-          <tr><td colspan="7" style="text-align: center;">Cargando productos...</td></tr>
+          <tr><td colspan="7" style="text-align: center;">Cargando productos...</td</tr>
         </tbody>
       </table>
     </div>
@@ -87,12 +90,9 @@ window.productosModule = () => `
   </div>
 `;
 
-// Variables globales
-let productosData = [];
-
-// Cargar productos
-window.cargarProductos = () => {
-  productosData = window.DB.getProductos();
+// Cargar productos desde Supabase
+window.cargarProductos = async () => {
+  productosData = await window.DB.getProductos();
   window.renderizarTablaProductos(productosData);
 };
 
@@ -102,17 +102,17 @@ window.renderizarTablaProductos = (productos) => {
   if (!tbody) return;
   
   if (productos.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No hay productos registrados</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No hay productos registrados</td</tr>';
     return;
   }
   
   tbody.innerHTML = productos.map(p => `
     <tr>
-      <td><strong>${p.sku}</strong></td>
-      <td><small>${p.codigoBarras}</small></td>
+      <td><strong>${p.sku || 'N/A'}</strong></td>
+      <td><small>${p.codigo_barras || 'N/A'}</small></td>
       <td>${p.nombre}</td>
       <td><span style="background: var(--primary); padding: 4px 8px; border-radius: 8px; font-size: 11px;">${p.categoria}</span></td>
-      <td><strong style="color: var(--success);">$${p.precio.toLocaleString()}</strong></td>
+      <td><strong style="color: var(--success);">$${parseFloat(p.precio).toLocaleString()}</strong></td>
       <td style="${p.stock < 5 ? 'color: var(--danger); font-weight: bold;' : ''}">${p.stock} unidades</td>
       <td>
         <button class="btn" style="background: var(--warning); padding: 5px 10px; margin-right: 5px;" onclick="window.editarProducto(${p.id})">
@@ -122,7 +122,7 @@ window.renderizarTablaProductos = (productos) => {
           <i class="fas fa-trash"></i>
         </button>
       </td>
-    </tr>
+    </table>
   `).join('');
 };
 
@@ -135,9 +135,9 @@ window.filtrarProductos = () => {
   
   if (busqueda) {
     filtrados = filtrados.filter(p => 
-      p.nombre.toLowerCase().includes(busqueda) ||
-      p.sku.toLowerCase().includes(busqueda) ||
-      p.codigoBarras.includes(busqueda)
+      (p.nombre && p.nombre.toLowerCase().includes(busqueda)) ||
+      (p.sku && p.sku.toLowerCase().includes(busqueda)) ||
+      (p.codigo_barras && p.codigo_barras.includes(busqueda))
     );
   }
   
@@ -177,16 +177,17 @@ window.editarProducto = (id) => {
 };
 
 // Eliminar producto
-window.eliminarProducto = (id) => {
+window.eliminarProducto = async (id) => {
   if (confirm('¿Eliminar este producto?')) {
-    window.DB.deleteProducto(id);
-    window.cargarProductos();
-    if (window.cargarProductosVenta) window.cargarProductosVenta();
+    await window.DB.deleteProducto(id);
+    await window.cargarProductos();
+    if (window.cargarProductosVenta) await window.cargarProductosVenta();
+    alert('✅ Producto eliminado');
   }
 };
 
 // Guardar producto
-document.addEventListener('submit', (e) => {
+document.addEventListener('submit', async (e) => {
   if (e.target.id === 'formProducto') {
     e.preventDefault();
     const id = document.getElementById('productoId').value;
@@ -197,18 +198,18 @@ document.addEventListener('submit', (e) => {
     const stock = parseInt(document.getElementById('prodStock').value);
     
     if (id) {
-      window.DB.updateProducto(id, { nombre, categoria, tipo, precio, stock });
+      await window.DB.updateProducto(id, { nombre, categoria, tipo, precio, stock });
       alert('✅ Producto actualizado');
     } else {
       const sku = `LOT-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       const codigoBarras = `750${Math.floor(Math.random() * 1000000000)}`;
-      window.DB.saveProducto({ nombre, categoria, tipo, precio, stock, sku, codigoBarras });
+      await window.DB.saveProducto({ nombre, categoria, tipo, precio, stock, sku, codigoBarras });
       alert('✅ Producto creado');
     }
     
     window.cerrarModalProducto();
-    window.cargarProductos();
-    if (window.cargarProductosVenta) window.cargarProductosVenta();
+    await window.cargarProductos();
+    if (window.cargarProductosVenta) await window.cargarProductosVenta();
   }
 });
 
@@ -218,3 +219,4 @@ setTimeout(() => {
     window.cargarProductos();
   }
 }, 100);
+

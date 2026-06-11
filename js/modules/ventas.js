@@ -1,12 +1,14 @@
+// Carrito global
 let carritoVentas = [];
 
 window.ventasModule = () => `
   <div style="display: grid; grid-template-columns: 1fr 400px; gap: 24px;">
+    <!-- Panel izquierdo -->
     <div>
       <div class="table-container">
         <h3 style="margin-bottom: 20px;">🔍 Buscar Producto</h3>
         <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-          <input type="text" id="buscadorProducto" class="form-control" placeholder="Escribe SKU, código o nombre...">
+          <input type="text" id="buscadorProducto" class="form-control" placeholder="SKU, código de barras o nombre...">
           <button class="btn btn-primary" onclick="window.buscarProductoVenta()">
             <i class="fas fa-search"></i> Buscar
           </button>
@@ -15,16 +17,19 @@ window.ventasModule = () => `
       </div>
       
       <div class="table-container" style="margin-top: 24px;">
-        <h3 style="margin-bottom: 20px;">📦 Todos los Productos</h3>
+        <h3 style="margin-bottom: 20px;">📦 Productos Disponibles</h3>
         <div id="listaProductosGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; max-height: 400px; overflow-y: auto;">
+          <p style="text-align: center; grid-column: 1/-1;">Cargando productos...</p>
         </div>
       </div>
     </div>
     
+    <!-- Panel derecho - Carrito -->
     <div>
       <div class="table-container">
-        <h3 style="margin-bottom: 20px;">🛒 Carrito</h3>
-        <div id="carritoVentas" style="min-height: 250px; max-height: 350px; overflow-y: auto;">
+        <h3 style="margin-bottom: 20px;">🛒 Carrito de Venta</h3>
+        
+        <div id="carritoVentas" style="min-height: 200px; max-height: 300px; overflow-y: auto;">
           <p style="text-align: center; color: var(--text-muted);">Carrito vacío</p>
         </div>
         
@@ -64,8 +69,9 @@ window.ventasModule = () => `
           <div style="display: flex; gap: 10px; margin-top: 10px;">
             <input type="text" id="ventaRapidaConcepto" class="form-control" placeholder="Concepto" style="flex: 2;">
             <input type="number" id="ventaRapidaMonto" class="form-control" placeholder="Monto" style="flex: 1;">
-            <button class="btn btn-success" onclick="window.agregarVentaRapida()">+</button>
+            <button class="btn btn-success" onclick="window.agregarVentaRapida()">➕</button>
           </div>
+          <small style="color: var(--text-muted);">Para piezas sueltas, refacciones o servicios</small>
         </div>
         
         <div style="display: flex; gap: 10px;">
@@ -81,21 +87,22 @@ window.ventasModule = () => `
   </div>
 `;
 
-// Cargar todos los productos en grid
-window.cargarProductosVenta = () => {
-  const productos = window.DB.getProductos().filter(p => p.stock > 0);
+// Cargar productos para venta
+window.cargarProductosVenta = async () => {
+  const productos = await window.DB.getProductos();
+  const productosConStock = productos.filter(p => p.stock > 0);
   const container = document.getElementById('listaProductosGrid');
   if (!container) return;
   
-  if (productos.length === 0) {
-    container.innerHTML = '<p style="text-align: center;">No hay productos disponibles</p>';
+  if (productosConStock.length === 0) {
+    container.innerHTML = '<p style="text-align: center; grid-column: 1/-1;">No hay productos disponibles</p>';
     return;
   }
   
-  container.innerHTML = productos.map(p => `
+  container.innerHTML = productosConStock.map(p => `
     <div style="background: var(--bg-dark); padding: 12px; border-radius: 10px; cursor: pointer; transition: all 0.2s;" onclick="window.agregarAlCarrito(${p.id})">
-      <div style="font-weight: bold;">${p.nombre}</div>
-      <div style="color: var(--success); font-size: 18px;">$${p.precio.toLocaleString()}</div>
+      <div style="font-weight: bold; font-size: 14px;">${p.nombre}</div>
+      <div style="color: var(--success); font-size: 18px;">$${parseFloat(p.precio).toLocaleString()}</div>
       <small style="color: var(--text-muted);">SKU: ${p.sku}</small>
       <div style="font-size: 11px;">Stock: ${p.stock}</div>
     </div>
@@ -103,18 +110,18 @@ window.cargarProductosVenta = () => {
 };
 
 // Buscar producto
-window.buscarProductoVenta = () => {
+window.buscarProductoVenta = async () => {
   const busqueda = document.getElementById('buscadorProducto').value.trim().toLowerCase();
   if (!busqueda) {
     document.getElementById('resultadoBusqueda').innerHTML = '<p style="color: var(--warning);">✏️ Escribe SKU, código o nombre</p>';
     return;
   }
   
-  const productos = window.DB.getProductos();
+  const productos = await window.DB.getProductos();
   const producto = productos.find(p => 
-    p.sku.toLowerCase() === busqueda || 
-    p.codigoBarras === busqueda ||
-    p.nombre.toLowerCase().includes(busqueda)
+    (p.sku && p.sku.toLowerCase() === busqueda) || 
+    (p.codigo_barras && p.codigo_barras === busqueda) ||
+    (p.nombre && p.nombre.toLowerCase().includes(busqueda))
   );
   
   const resultadoDiv = document.getElementById('resultadoBusqueda');
@@ -125,12 +132,12 @@ window.buscarProductoVenta = () => {
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <div>
             <strong style="font-size: 16px;">${producto.nombre}</strong><br>
-            <small>SKU: ${producto.sku} | Código: ${producto.codigoBarras}</small><br>
-            <strong style="color: var(--success);">$${producto.precio.toLocaleString()}</strong>
+            <small>SKU: ${producto.sku} | Código: ${producto.codigo_barras}</small><br>
+            <strong style="color: var(--success);">$${parseFloat(producto.precio).toLocaleString()}</strong>
             <span style="color: var(--text-muted);"> | Stock: ${producto.stock}</span>
           </div>
           <button class="btn btn-success" onclick="window.agregarAlCarrito(${producto.id})">
-            Agregar
+            <i class="fas fa-cart-plus"></i> Agregar
           </button>
         </div>
       </div>
@@ -142,14 +149,14 @@ window.buscarProductoVenta = () => {
   } else {
     resultadoDiv.innerHTML = `<div style="background: var(--bg-card); padding: 15px; border-radius: 10px;">
       ❌ No se encontró "${busqueda}"<br>
-      <small>Puedes usar "Venta Rápida" para agregar un monto personalizado</small>
+      <small>Usa "Venta Rápida" para montos personalizados</small>
     </div>`;
   }
 };
 
-// Agregar producto al carrito
-window.agregarAlCarrito = (id) => {
-  const productos = window.DB.getProductos();
+// Agregar al carrito
+window.agregarAlCarrito = async (id) => {
+  const productos = await window.DB.getProductos();
   const producto = productos.find(p => p.id == id);
   
   if (!producto) {
@@ -158,22 +165,22 @@ window.agregarAlCarrito = (id) => {
   }
   
   if (producto.stock < 1) {
-    alert('❌ Producto sin stock disponible');
+    alert('❌ Producto sin stock');
     return;
   }
   
-  const itemExistente = carritoVentas.find(item => item.id == id && item.tipo === 'producto');
-  if (itemExistente) {
-    if (itemExistente.cantidad + 1 > producto.stock) {
-      alert(`⚠️ Stock insuficiente. Solo hay ${producto.stock} unidades`);
+  const existente = carritoVentas.find(item => item.id === id && item.tipo === 'producto');
+  if (existente) {
+    if (existente.cantidad + 1 > producto.stock) {
+      alert(`⚠️ Stock insuficiente. Solo hay ${producto.stock}`);
       return;
     }
-    itemExistente.cantidad++;
+    existente.cantidad++;
   } else {
     carritoVentas.push({
       id: producto.id,
       nombre: producto.nombre,
-      precio: producto.precio,
+      precio: parseFloat(producto.precio),
       cantidad: 1,
       sku: producto.sku,
       tipo: 'producto'
@@ -183,7 +190,6 @@ window.agregarAlCarrito = (id) => {
   window.renderCarritoVentas();
   document.getElementById('buscadorProducto').value = '';
   document.getElementById('resultadoBusqueda').innerHTML = '';
-  alert(`✅ ${producto.nombre} agregado al carrito`);
 };
 
 // Venta rápida
@@ -205,14 +211,13 @@ window.agregarVentaRapida = () => {
     nombre: `🔧 ${concepto}`,
     precio: monto,
     cantidad: 1,
-    sku: 'VENTA_RAPIDA',
+    sku: 'RAPIDA',
     tipo: 'rapida'
   });
   
   document.getElementById('ventaRapidaConcepto').value = '';
   document.getElementById('ventaRapidaMonto').value = '';
   window.renderCarritoVentas();
-  alert('✅ Agregado al carrito');
 };
 
 // Renderizar carrito
@@ -240,18 +245,16 @@ window.renderCarritoVentas = () => {
         </div>
         <div style="flex: 1; text-align: center;">
           ${item.tipo === 'producto' ? `
-            <button onclick="window.modificarCantidad(${index}, -1)" style="background: var(--gray); border: none; width: 25px; height: 25px; border-radius: 5px;">-</button>
+            <button onclick="window.modificarCantidad(${index}, -1)" style="background: var(--gray); border: none; width: 25px; height: 25px; border-radius: 5px; cursor: pointer;">-</button>
             <span style="margin: 0 8px;">${item.cantidad}</span>
-            <button onclick="window.modificarCantidad(${index}, 1)" style="background: var(--gray); border: none; width: 25px; height: 25px; border-radius: 5px;">+</button>
-          ` : `
-            <span>1</span>
-          `}
+            <button onclick="window.modificarCantidad(${index}, 1)" style="background: var(--gray); border: none; width: 25px; height: 25px; border-radius: 5px; cursor: pointer;">+</button>
+          ` : `<span>1</span>`}
         </div>
         <div style="flex: 1; text-align: right;">
           $${itemTotal.toLocaleString()}
         </div>
         <div>
-          <button onclick="window.eliminarDelCarrito(${index})" style="background: var(--danger); border: none; width: 30px; height: 30px; border-radius: 5px; margin-left: 10px;">
+          <button onclick="window.eliminarDelCarrito(${index})" style="background: var(--danger); border: none; width: 30px; height: 30px; border-radius: 5px; cursor: pointer; margin-left: 10px;">
             🗑️
           </button>
         </div>
@@ -268,11 +271,17 @@ window.renderCarritoVentas = () => {
 };
 
 // Modificar cantidad
-window.modificarCantidad = (index, delta) => {
+window.modificarCantidad = async (index, delta) => {
   const item = carritoVentas[index];
-  if (item.tipo === 'rapida') return;
+  if (item.tipo === 'rapida') {
+    if (delta < 1) {
+      carritoVentas.splice(index, 1);
+    }
+    window.renderCarritoVentas();
+    return;
+  }
   
-  const productos = window.DB.getProductos();
+  const productos = await window.DB.getProductos();
   const producto = productos.find(p => p.id == item.id);
   
   const nuevaCantidad = item.cantidad + delta;
@@ -281,7 +290,7 @@ window.modificarCantidad = (index, delta) => {
   } else if (producto && nuevaCantidad <= producto.stock) {
     item.cantidad = nuevaCantidad;
   } else {
-    alert(`⚠️ Stock insuficiente. Solo hay ${producto?.stock || 0} unidades`);
+    alert(`⚠️ Stock insuficiente. Solo hay ${producto?.stock || 0}`);
     return;
   }
   
@@ -304,7 +313,7 @@ window.limpiarCarrito = () => {
 };
 
 // Finalizar venta
-window.finalizarVenta = () => {
+window.finalizarVenta = async () => {
   if (carritoVentas.length === 0) {
     alert('❌ El carrito está vacío');
     return;
@@ -332,10 +341,10 @@ window.finalizarVenta = () => {
       comentario: comentario
     };
     
-    window.DB.registrarVenta(venta);
+    await window.DB.registrarVenta(venta);
     carritoVentas = [];
     window.renderCarritoVentas();
-    window.cargarProductosVenta();
+    await window.cargarProductosVenta();
     document.getElementById('comentarioVenta').value = '';
     
     alert(`✅ Venta realizada con éxito\n\nTotal: $${total.toLocaleString()}`);

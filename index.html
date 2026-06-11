@@ -105,7 +105,15 @@
         </main>
     </div>
     
-    <!-- Scripts -->
+    <!-- ============================================ -->
+    <!-- SUPABASE - BASE DE DATOS EN LA NUBE          -->
+    <!-- ============================================ -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-client.js"></script>
+    
+    <!-- ============================================ -->
+    <!-- MÓDULOS DEL SISTEMA                          -->
+    <!-- ============================================ -->
     <script src="js/utils/database.js"></script>
     <script src="js/modules/dashboard.js"></script>
     <script src="js/modules/ventas.js"></script>
@@ -115,6 +123,19 @@
     <script src="js/modules/clientes.js"></script>
     <script src="js/modules/usuarios.js"></script>
     <script src="js/modules/reportes.js"></script>
+    
+    <!-- App principal -->
     <script src="js/app.js"></script>
+    
+    <!-- Verificar conexión -->
+    <script>
+        setTimeout(() => {
+            if (window.supabase) {
+                console.log("🚀 Sistema listo con Supabase");
+            } else {
+                console.warn("⚠️ Supabase no conectado");
+            }
+        }, 500);
+    </script>
 </body>
 </html>
