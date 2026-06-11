@@ -1,160 +1,220 @@
-window.productosModule = () => {
-    const categorias = ['consolas', 'accesorios', 'videojuegos', 'refacciones', 'servicios'];
-    const tipos = ['nueva', 'usada-completa', 'segunda-mano', 'pieza'];
+window.productosModule = () => `
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+    <div>
+      <h2>📦 Gestión de Productos</h2>
+      <p style="color: var(--text-muted);">Administra tu inventario</p>
+    </div>
+    <button class="btn btn-primary" onclick="window.mostrarModalProducto()">
+      <i class="fas fa-plus"></i> Nuevo Producto
+    </button>
+  </div>
+  
+  <div class="table-container">
+    <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+      <input type="text" id="buscarProductoInput" class="form-control" placeholder="🔍 Buscar por nombre, SKU o código..." style="flex: 1;">
+      <select id="filtroCategoria" class="form-control" style="width: auto;">
+        <option value="">Todas las categorías</option>
+        <option value="consolas">🎮 Consolas</option>
+        <option value="accesorios">🎧 Accesorios</option>
+        <option value="videojuegos">🎮 Videojuegos</option>
+        <option value="refacciones">🔧 Refacciones</option>
+      </select>
+      <button class="btn btn-primary" onclick="window.filtrarProductos()">Buscar</button>
+    </div>
     
-    return `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-            <div>
-                <h2>📦 Gestión de Productos</h2>
-                <p style="color: var(--text-muted);">Administra tu inventario</p>
-            </div>
-            <button class="btn btn-primary" onclick="window.mostrarModalProducto()">
-                <i class="fas fa-plus"></i> Nuevo Producto
-            </button>
+    <div style="overflow-x: auto;">
+      <table style="width: 100%;">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Código Barras</th>
+            <th>Producto</th>
+            <th>Categoría</th>
+            <th>Precio</th>
+            <th>Stock</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tablaProductos">
+          <tr><td colspan="7" style="text-align: center;">Cargando productos...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+  <div id="modalProducto" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalProductoTitulo">Nuevo Producto</h3>
+        <span class="close-modal" onclick="window.cerrarModalProducto()">&times;</span>
+      </div>
+      <form id="formProducto">
+        <input type="hidden" id="productoId">
+        <div class="form-group">
+          <label>Nombre del Producto *</label>
+          <input type="text" id="prodNombre" class="form-control" required>
         </div>
-        
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>SKU</th>
-                        <th>Código Barras</th>
-                        <th>Producto</th>
-                        <th>Categoría</th>
-                        <th>Tipo</th>
-                        <th>Precio</th>
-                        <th>Stock</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="tablaProductos">
-                </tbody>
-            </table>
+        <div class="form-group">
+          <label>Categoría *</label>
+          <select id="prodCategoria" class="form-control" required>
+            <option value="consolas">🎮 Consolas</option>
+            <option value="accesorios">🎧 Accesorios</option>
+            <option value="videojuegos">🎮 Videojuegos</option>
+            <option value="refacciones">🔧 Refacciones</option>
+            <option value="servicios">🛠️ Servicios</option>
+          </select>
         </div>
-        
-        <!-- Modal Producto -->
-        <div id="modalProducto" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3 id="modalProductoTitulo">Nuevo Producto</h3>
-                    <span class="close-modal" onclick="window.cerrarModalProducto()">&times;</span>
-                </div>
-                <form id="formProducto">
-                    <input type="hidden" id="productoId">
-                    <div class="form-group">
-                        <label>Nombre del Producto *</label>
-                        <input type="text" id="prodNombre" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Categoría *</label>
-                        <select id="prodCategoria" class="form-control" required>
-                            <option value="">Seleccionar</option>
-                            ${categorias.map(c => `<option value="${c}">${c.toUpperCase()}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Tipo *</label>
-                        <select id="prodTipo" class="form-control" required>
-                            <option value="">Seleccionar</option>
-                            ${tipos.map(t => `<option value="${t}">${t.replace('-', ' ').toUpperCase()}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Precio *</label>
-                        <input type="number" id="prodPrecio" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Stock Inicial *</label>
-                        <input type="number" id="prodStock" class="form-control" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary" style="width: 100%;">Guardar Producto</button>
-                </form>
-            </div>
+        <div class="form-group">
+          <label>Tipo *</label>
+          <select id="prodTipo" class="form-control" required>
+            <option value="nueva">🆕 Nueva</option>
+            <option value="usada-completa">📦 Usada Completa</option>
+            <option value="segunda-mano">🔄 Segunda Mano</option>
+            <option value="pieza">🔧 Pieza/Refacción</option>
+          </select>
         </div>
-    `;
-};
+        <div class="form-group">
+          <label>Precio * (MXN)</label>
+          <input type="number" id="prodPrecio" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label>Stock *</label>
+          <input type="number" id="prodStock" class="form-control" required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Guardar Producto</button>
+      </form>
+    </div>
+  </div>
+`;
 
+// Variables globales
+let productosData = [];
+
+// Cargar productos
 window.cargarProductos = () => {
-    const productos = window.DB.getProductos();
-    const tbody = document.getElementById('tablaProductos');
-    if (!tbody) return;
-    
-    tbody.innerHTML = productos.map(p => `
-        <tr>
-            <td>${p.sku}</td>
-            <td>${p.codigoBarras}</td>
-            <td>${p.nombre}</td>
-            <td>${p.categoria}</td>
-            <td>${p.tipo}</td>
-            <td>$${p.precio.toLocaleString()}</td>
-            <td>${p.stock}</td>
-            <td>
-                <button class="btn" style="background: var(--warning); padding: 5px 10px; margin-right: 5px;" onclick="window.editarProducto(${p.id})">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn" style="background: var(--danger); padding: 5px 10px;" onclick="window.eliminarProducto(${p.id})">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </td>
-        </tr>
-    `).join('');
+  productosData = window.DB.getProductos();
+  window.renderizarTablaProductos(productosData);
 };
 
+// Renderizar tabla
+window.renderizarTablaProductos = (productos) => {
+  const tbody = document.getElementById('tablaProductos');
+  if (!tbody) return;
+  
+  if (productos.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No hay productos registrados</td></tr>';
+    return;
+  }
+  
+  tbody.innerHTML = productos.map(p => `
+    <tr>
+      <td><strong>${p.sku}</strong></td>
+      <td><small>${p.codigoBarras}</small></td>
+      <td>${p.nombre}</td>
+      <td><span style="background: var(--primary); padding: 4px 8px; border-radius: 8px; font-size: 11px;">${p.categoria}</span></td>
+      <td><strong style="color: var(--success);">$${p.precio.toLocaleString()}</strong></td>
+      <td style="${p.stock < 5 ? 'color: var(--danger); font-weight: bold;' : ''}">${p.stock} unidades</td>
+      <td>
+        <button class="btn" style="background: var(--warning); padding: 5px 10px; margin-right: 5px;" onclick="window.editarProducto(${p.id})">
+          <i class="fas fa-edit"></i>
+        </button>
+        <button class="btn" style="background: var(--danger); padding: 5px 10px;" onclick="window.eliminarProducto(${p.id})">
+          <i class="fas fa-trash"></i>
+        </button>
+      </td>
+    </tr>
+  `).join('');
+};
+
+// Filtrar productos
+window.filtrarProductos = () => {
+  const busqueda = document.getElementById('buscarProductoInput').value.toLowerCase();
+  const categoria = document.getElementById('filtroCategoria').value;
+  
+  let filtrados = [...productosData];
+  
+  if (busqueda) {
+    filtrados = filtrados.filter(p => 
+      p.nombre.toLowerCase().includes(busqueda) ||
+      p.sku.toLowerCase().includes(busqueda) ||
+      p.codigoBarras.includes(busqueda)
+    );
+  }
+  
+  if (categoria) {
+    filtrados = filtrados.filter(p => p.categoria === categoria);
+  }
+  
+  window.renderizarTablaProductos(filtrados);
+};
+
+// Mostrar modal
 window.mostrarModalProducto = () => {
-    document.getElementById('modalProductoTitulo').innerText = 'Nuevo Producto';
-    document.getElementById('productoId').value = '';
-    document.getElementById('formProducto').reset();
-    document.getElementById('modalProducto').style.display = 'flex';
+  document.getElementById('modalProductoTitulo').innerText = 'Nuevo Producto';
+  document.getElementById('productoId').value = '';
+  document.getElementById('formProducto').reset();
+  document.getElementById('modalProducto').style.display = 'flex';
 };
 
+// Cerrar modal
 window.cerrarModalProducto = () => {
-    document.getElementById('modalProducto').style.display = 'none';
+  document.getElementById('modalProducto').style.display = 'none';
 };
 
+// Editar producto
 window.editarProducto = (id) => {
-    const productos = window.DB.getProductos();
-    const producto = productos.find(p => p.id == id);
-    if (producto) {
-        document.getElementById('modalProductoTitulo').innerText = 'Editar Producto';
-        document.getElementById('productoId').value = producto.id;
-        document.getElementById('prodNombre').value = producto.nombre;
-        document.getElementById('prodCategoria').value = producto.categoria;
-        document.getElementById('prodTipo').value = producto.tipo;
-        document.getElementById('prodPrecio').value = producto.precio;
-        document.getElementById('prodStock').value = producto.stock;
-        document.getElementById('modalProducto').style.display = 'flex';
-    }
+  const producto = productosData.find(p => p.id == id);
+  if (producto) {
+    document.getElementById('modalProductoTitulo').innerText = 'Editar Producto';
+    document.getElementById('productoId').value = producto.id;
+    document.getElementById('prodNombre').value = producto.nombre;
+    document.getElementById('prodCategoria').value = producto.categoria;
+    document.getElementById('prodTipo').value = producto.tipo || 'nueva';
+    document.getElementById('prodPrecio').value = producto.precio;
+    document.getElementById('prodStock').value = producto.stock;
+    document.getElementById('modalProducto').style.display = 'flex';
+  }
 };
 
+// Eliminar producto
 window.eliminarProducto = (id) => {
-    if (confirm('¿Eliminar este producto?')) {
-        window.DB.deleteProducto(id);
-        window.cargarProductos();
-        window.actualizarDashboard?.();
-    }
+  if (confirm('¿Eliminar este producto?')) {
+    window.DB.deleteProducto(id);
+    window.cargarProductos();
+    if (window.cargarProductosVenta) window.cargarProductosVenta();
+  }
 };
 
 // Guardar producto
 document.addEventListener('submit', (e) => {
-    if (e.target.id === 'formProducto') {
-        e.preventDefault();
-        const id = document.getElementById('productoId').value;
-        const nombre = document.getElementById('prodNombre').value;
-        const categoria = document.getElementById('prodCategoria').value;
-        const tipo = document.getElementById('prodTipo').value;
-        const precio = parseFloat(document.getElementById('prodPrecio').value);
-        const stock = parseInt(document.getElementById('prodStock').value);
-        
-        if (id) {
-            window.DB.updateProducto(id, { nombre, categoria, tipo, precio, stock });
-        } else {
-            const sku = `LOT-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-            const codigoBarras = `750${Math.floor(Math.random() * 1000000000)}`;
-            window.DB.saveProducto({ nombre, categoria, tipo, precio, stock, sku, codigoBarras });
-        }
-        
-        window.cerrarModalProducto();
-        window.cargarProductos();
-        window.actualizarDashboard?.();
+  if (e.target.id === 'formProducto') {
+    e.preventDefault();
+    const id = document.getElementById('productoId').value;
+    const nombre = document.getElementById('prodNombre').value;
+    const categoria = document.getElementById('prodCategoria').value;
+    const tipo = document.getElementById('prodTipo').value;
+    const precio = parseFloat(document.getElementById('prodPrecio').value);
+    const stock = parseInt(document.getElementById('prodStock').value);
+    
+    if (id) {
+      window.DB.updateProducto(id, { nombre, categoria, tipo, precio, stock });
+      alert('✅ Producto actualizado');
+    } else {
+      const sku = `LOT-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      const codigoBarras = `750${Math.floor(Math.random() * 1000000000)}`;
+      window.DB.saveProducto({ nombre, categoria, tipo, precio, stock, sku, codigoBarras });
+      alert('✅ Producto creado');
     }
+    
+    window.cerrarModalProducto();
+    window.cargarProductos();
+    if (window.cargarProductosVenta) window.cargarProductosVenta();
+  }
 });
+
+// Inicializar
+setTimeout(() => {
+  if (document.getElementById('tablaProductos')) {
+    window.cargarProductos();
+  }
+}, 100);
