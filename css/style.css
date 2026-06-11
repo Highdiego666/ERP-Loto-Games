@@ -19,6 +19,305 @@
     --border: #334155;
 }
 
+/* ============================================
+   BASE RESPONSIVE - MEJORAS TÁCTILES
+   ============================================ */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================
+   RESPONSIVE DESIGN - MÓVIL, TABLET, LAPTOP
+   ============================================ */
+
+/* Tablets y dispositivos medianos (max 1024px) */
+@media (max-width: 1024px) {
+  .main-content {
+    padding: 15px;
+  }
+  
+  .content-area {
+    padding: 15px;
+  }
+  
+  .cards-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+  }
+  
+  .stat-value {
+    font-size: 24px;
+  }
+}
+
+/* Móviles (max 768px) - MENÚ LATERAL SE CONVIERTE EN MENÚ INFERIOR */
+@media (max-width: 768px) {
+  
+  /* Cambiar layout de horizontal a vertical */
+  .app-container {
+    flex-direction: column;
+  }
+  
+  /* Sidebar se convierte en barra inferior */
+  .sidebar {
+    width: 100%;
+    height: auto;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: var(--bg-dark);
+    border-top: 1px solid var(--border);
+    border-right: none;
+    padding: 8px 0;
+  }
+  
+  .logo-area {
+    display: none;
+  }
+  
+  .nav-menu {
+    flex-direction: row;
+    justify-content: space-around;
+    padding: 8px 12px;
+    gap: 5px;
+    overflow-x: auto;
+  }
+  
+  .nav-item {
+    flex-direction: column;
+    padding: 8px 12px;
+    font-size: 11px;
+    gap: 4px;
+    text-align: center;
+    min-width: 60px;
+  }
+  
+  .nav-item i {
+    width: auto;
+    font-size: 20px;
+  }
+  
+  .nav-item span {
+    font-size: 10px;
+  }
+  
+  .sidebar-footer {
+    display: none;
+  }
+  
+  /* Main content ajustado */
+  .main-content {
+    margin-bottom: 70px;
+    height: calc(100vh - 70px);
+  }
+  
+  .top-bar {
+    flex-direction: column;
+    gap: 10px;
+    padding: 15px;
+  }
+  
+  .page-title h1 {
+    font-size: 20px;
+  }
+  
+  .page-title p {
+    font-size: 11px;
+  }
+  
+  .content-area {
+    padding: 15px;
+  }
+  
+  /* Tarjetas en móvil */
+  .cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .stat-card {
+    padding: 12px;
+  }
+  
+  .stat-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+    margin-bottom: 10px;
+  }
+  
+  .stat-value {
+    font-size: 20px;
+  }
+  
+  .stat-label {
+    font-size: 11px;
+  }
+  
+  /* Tablas - scroll horizontal */
+  .table-container {
+    overflow-x: auto;
+    padding: 12px;
+  }
+  
+  table {
+    font-size: 12px;
+    min-width: 500px;
+  }
+  
+  th, td {
+    padding: 8px;
+  }
+  
+  /* Botones más grandes para dedos */
+  .btn {
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+  
+  /* Formularios en móvil */
+  .form-control {
+    padding: 12px;
+    font-size: 16px;
+  }
+  
+  /* Modal en móvil */
+  .modal-content {
+    width: 95%;
+    padding: 20px;
+    margin: 20px auto;
+  }
+  
+  /* Ventas - layout en columna */
+  [style*="grid-template-columns: 1fr 400px"] {
+    grid-template-columns: 1fr !important;
+    gap: 15px !important;
+  }
+  
+  /* Carrito en móvil */
+  #carritoVentas {
+    max-height: 250px !important;
+  }
+  
+  /* Venta rápida */
+  #ventaRapidaConcepto, #ventaRapidaMonto {
+    font-size: 14px;
+  }
+  
+  /* Grid de productos rápidos */
+  #productosRapidos {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* Móviles pequeños (max 480px) */
+@media (max-width: 480px) {
+  .cards-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  
+  .top-bar {
+    padding: 12px;
+  }
+  
+  .content-area {
+    padding: 10px;
+  }
+  
+  .nav-item {
+    min-width: 50px;
+    padding: 6px 8px;
+  }
+  
+  .nav-item i {
+    font-size: 18px;
+  }
+  
+  .nav-item span {
+    font-size: 9px;
+  }
+  
+  .stat-card {
+    padding: 10px;
+  }
+  
+  .stat-value {
+    font-size: 18px;
+  }
+  
+  .btn {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+}
+
+/* Pantallas muy grandes (4K) */
+@media (min-width: 1920px) {
+  .content-area {
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+  
+  .cards-grid {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  }
+  
+  .stat-value {
+    font-size: 40px;
+  }
+}
+
+/* Mejoras táctiles para móvil */
+@media (hover: none) and (pointer: coarse) {
+  .btn, .nav-item, button, [onclick] {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .btn:active, .nav-item:active {
+    transform: scale(0.97);
+    transition: transform 0.05s;
+  }
+  
+  button, .btn, .nav-item {
+    min-height: 44px;
+  }
+}
+
+/* Orientación horizontal en móvil */
+@media (max-width: 900px) and (orientation: landscape) {
+  .sidebar {
+    width: 70px;
+    height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: auto;
+  }
+  
+  .nav-menu {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .nav-item span {
+    display: none;
+  }
+  
+  .main-content {
+    margin-bottom: 0;
+    margin-left: 70px;
+  }
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -454,4 +753,287 @@ td {
     .cards-grid {
         grid-template-columns: 1fr;
     }
+}
+
+/* ============================================
+   RESPONSIVE DESIGN - MÓVIL, TABLET, LAPTOP
+   ============================================ */
+
+/* Tablets y dispositivos medianos (max 1024px) */
+@media (max-width: 1024px) {
+  .main-content {
+    padding: 15px;
+  }
+  
+  .content-area {
+    padding: 15px;
+  }
+  
+  .cards-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+  }
+  
+  .stat-value {
+    font-size: 24px;
+  }
+}
+
+/* Móviles (max 768px) - MENÚ LATERAL SE CONVIERTE EN MENÚ INFERIOR */
+@media (max-width: 768px) {
+  
+  /* Cambiar layout de horizontal a vertical */
+  .app-container {
+    flex-direction: column;
+  }
+  
+  /* Sidebar se convierte en barra inferior */
+  .sidebar {
+    width: 100%;
+    height: auto;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: var(--bg-dark);
+    border-top: 1px solid var(--border);
+    border-right: none;
+    padding: 8px 0;
+  }
+  
+  .logo-area {
+    display: none; /* Ocultar logo en móvil para más espacio */
+  }
+  
+  .nav-menu {
+    flex-direction: row;
+    justify-content: space-around;
+    padding: 8px 12px;
+    gap: 5px;
+    overflow-x: auto;
+  }
+  
+  .nav-item {
+    flex-direction: column;
+    padding: 8px 12px;
+    font-size: 11px;
+    gap: 4px;
+    text-align: center;
+    min-width: 60px;
+  }
+  
+  .nav-item i {
+    width: auto;
+    font-size: 20px;
+  }
+  
+  .nav-item span {
+    font-size: 10px;
+  }
+  
+  .sidebar-footer {
+    display: none; /* Ocultar info de usuario en móvil */
+  }
+  
+  /* Main content ajustado */
+  .main-content {
+    margin-bottom: 70px; /* Espacio para la barra inferior */
+    height: calc(100vh - 70px);
+  }
+  
+  .top-bar {
+    flex-direction: column;
+    gap: 10px;
+    padding: 15px;
+  }
+  
+  .page-title h1 {
+    font-size: 20px;
+  }
+  
+  .page-title p {
+    font-size: 11px;
+  }
+  
+  .content-area {
+    padding: 15px;
+  }
+  
+  /* Tarjetas en móvil */
+  .cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .stat-card {
+    padding: 12px;
+  }
+  
+  .stat-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+    margin-bottom: 10px;
+  }
+  
+  .stat-value {
+    font-size: 20px;
+  }
+  
+  .stat-label {
+    font-size: 11px;
+  }
+  
+  /* Tablas - scroll horizontal */
+  .table-container {
+    overflow-x: auto;
+    padding: 12px;
+  }
+  
+  table {
+    font-size: 12px;
+    min-width: 500px;
+  }
+  
+  th, td {
+    padding: 8px;
+  }
+  
+  /* Botones más grandes para dedos */
+  .btn {
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+  
+  /* Formularios en móvil */
+  .form-control {
+    padding: 12px;
+    font-size: 16px; /* Evita zoom en iOS */
+  }
+  
+  /* Modal en móvil */
+  .modal-content {
+    width: 95%;
+    padding: 20px;
+    margin: 20px auto;
+  }
+  
+  /* Ventas - layout en columna */
+  [style*="grid-template-columns: 1fr 400px"] {
+    grid-template-columns: 1fr !important;
+    gap: 15px !important;
+  }
+  
+  /* Carrito en móvil */
+  #carritoVentas {
+    max-height: 250px !important;
+  }
+  
+  /* Venta rápida */
+  #ventaRapidaConcepto, #ventaRapidaMonto {
+    font-size: 14px;
+  }
+}
+
+/* Móviles pequeños (max 480px) */
+@media (max-width: 480px) {
+  .cards-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  
+  .top-bar {
+    padding: 12px;
+  }
+  
+  .content-area {
+    padding: 10px;
+  }
+  
+  .nav-item {
+    min-width: 50px;
+    padding: 6px 8px;
+  }
+  
+  .nav-item i {
+    font-size: 18px;
+  }
+  
+  .nav-item span {
+    font-size: 9px;
+  }
+  
+  .stat-card {
+    padding: 10px;
+  }
+  
+  .stat-value {
+    font-size: 18px;
+  }
+  
+  .btn {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+  
+  /* Ventas: productos rápidos en grid de 2 columnas */
+  #productosRapidos {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* Ajustes específicos para pantallas muy grandes (4K) */
+@media (min-width: 1920px) {
+  .content-area {
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+  
+  .cards-grid {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  }
+  
+  .stat-value {
+    font-size: 40px;
+  }
+}
+
+/* Mejoras de touch para móvil */
+@media (hover: none) and (pointer: coarse) {
+  .btn, .nav-item, button, [onclick] {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .btn:active, .nav-item:active {
+    transform: scale(0.97);
+    transition: transform 0.05s;
+  }
+  
+  /* Espaciado táctil */
+  button, .btn, .nav-item {
+    min-height: 44px;
+  }
+}
+
+/* Orientación horizontal en móvil */
+@media (max-width: 900px) and (orientation: landscape) {
+  .sidebar {
+    width: 70px;
+  }
+  
+  .nav-menu {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .nav-item span {
+    display: none;
+  }
+  
+  .main-content {
+    margin-bottom: 0;
+    margin-left: 70px;
+  }
 }
