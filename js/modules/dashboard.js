@@ -67,48 +67,41 @@ window.actualizarDashboard = async () => {
     
     try {
         // Obtener datos
-        const productos = await window.DB.getProductos();
-        const ventas = await window.DB.getVentas();
-        const servicios = await window.DB.getServicios();
-        const clientes = await window.DB.getClientes();
+        const [productos, ventas, servicios, clientes] = await Promise.all([
+            window.DB.getProductos(),
+            window.DB.getVentas(),
+            window.DB.getServicios(),
+            window.DB.getClientes()
+        ]);
         
         console.log(`📦 Datos cargados: ${productos.length} productos, ${ventas.length} ventas`);
         
-        // ========== VENTAS HOY ==========
+        // Calcular fechas
         const hoy = new Date();
         hoy.setHours(0, 0, 0, 0);
         
-        const ventasHoy = ventas.filter(v => {
-            const fechaVenta = new Date(v.fecha);
-            return fechaVenta >= hoy;
-        });
-        const totalHoy = ventasHoy.reduce((sum, v) => sum + (v.total || 0), 0);
-        
-        const ventasHoyElement = document.getElementById('ventasHoy');
-        if (ventasHoyElement) ventasHoyElement.innerHTML = `$${totalHoy.toLocaleString()}`;
-        
-        // ========== VENTAS SEMANA ==========
         const inicioSemana = new Date();
         inicioSemana.setDate(inicioSemana.getDate() - inicioSemana.getDay());
         inicioSemana.setHours(0, 0, 0, 0);
         
-        const ventasSemana = ventas.filter(v => new Date(v.fecha) >= inicioSemana);
-        const totalSemana = ventasSemana.reduce((sum, v) => sum + (v.total || 0), 0);
-        
-        const ventasSemanaElement = document.getElementById('ventasSemana');
-        if (ventasSemanaElement) ventasSemanaElement.innerHTML = `$${totalSemana.toLocaleString()}`;
-        
-        // ========== TENDENCIA ==========
         const ayer = new Date();
         ayer.setDate(ayer.getDate() - 1);
         ayer.setHours(0, 0, 0, 0);
         
+        // Filtrar ventas
+        const ventasHoy = ventas.filter(v => new Date(v.fecha) >= hoy);
+        const totalHoy = ventasHoy.reduce((sum, v) => sum + (v.total || 0), 0);
+        
+        const ventasSemana = ventas.filter(v => new Date(v.fecha) >= inicioSemana);
+        const totalSemana = ventasSemana.reduce((sum, v) => sum + (v.total || 0), 0);
+        
         const ventasAyer = ventas.filter(v => {
-            const fechaVenta = new Date(v.fecha);
-            return fechaVenta >= ayer && fechaVenta < hoy;
+            const fecha = new Date(v.fecha);
+            return fecha >= ayer && fecha < hoy;
         });
         const totalAyer = ventasAyer.reduce((sum, v) => sum + (v.total || 0), 0);
         
+        // Calcular tendencia
         let tendencia = 0;
         if (totalAyer > 0) {
             tendencia = ((totalHoy - totalAyer) / totalAyer * 100);
@@ -116,51 +109,47 @@ window.actualizarDashboard = async () => {
             tendencia = 100;
         }
         
-        const tendenciaElement = document.getElementById('tendenciaVentas');
-        if (tendenciaElement) {
-            tendenciaElement.innerHTML = `${tendencia >= 0 ? '+' : ''}${tendencia.toFixed(0)}% vs ayer`;
-            tendenciaElement.style.color = tendencia >= 0 ? 'var(--success)' : 'var(--danger)';
-        }
+        // Actualizar DOM con verificaciones de seguridad
+        const setText = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = value;
+        };
         
-        // ========== PRODUCTOS ==========
-        const totalProductosElement = document.getElementById('totalProductos');
-        if (totalProductosElement) totalProductosElement.innerHTML = productos.length;
+        setText('ventasHoy', `$${totalHoy.toLocaleString()}`);
+        setText('ventasSemana', `$${totalSemana.toLocaleString()}`);
+        setText('totalProductos', productos.length);
+        setText('serviciosPendientes', servicios.filter(s => s.estado === 'pendiente').length);
+        setText('clientesTotales', clientes.length);
+        
+        const tendenciaEl = document.getElementById('tendenciaVentas');
+        if (tendenciaEl) {
+            tendenciaEl.innerHTML = `${tendencia >= 0 ? '+' : ''}${tendencia.toFixed(0)}% vs ayer`;
+            tendenciaEl.style.color = tendencia >= 0 ? 'var(--success)' : 'var(--danger)';
+        }
         
         const stockBajo = productos.filter(p => (p.stock || 0) < 5).length;
-        const stockBajoBadge = document.getElementById('stockBajoBadge');
-        if (stockBajoBadge) {
-            stockBajoBadge.innerHTML = stockBajo > 0 ? `⚠️ ${stockBajo} con stock bajo` : '';
-        }
+        const stockBadge = document.getElementById('stockBajoBadge');
+        if (stockBadge) stockBadge.innerHTML = stockBajo > 0 ? `⚠️ ${stockBajo} con stock bajo` : '';
         
-        // ========== SERVICIOS PENDIENTES ==========
-        const pendientes = servicios.filter(s => s.estado === 'pendiente').length;
-        const serviciosElement = document.getElementById('serviciosPendientes');
-        if (serviciosElement) serviciosElement.innerHTML = pendientes;
-        
-        // ========== CLIENTES ==========
-        const clientesElement = document.getElementById('clientesTotales');
-        if (clientesElement) clientesElement.innerHTML = clientes.length;
-        
-        // ========== PRODUCTO MÁS VENDIDO ==========
+        // Producto más vendido
         const ventasProductos = {};
         ventas.forEach(venta => {
             if (venta.items && Array.isArray(venta.items)) {
                 venta.items.forEach(item => {
                     if (item.tipo !== 'rapida' && item.nombre) {
-                        const nombre = item.nombre;
-                        ventasProductos[nombre] = (ventasProductos[nombre] || 0) + (item.cantidad || 0);
+                        ventasProductos[item.nombre] = (ventasProductos[item.nombre] || 0) + (item.cantidad || 0);
                     }
                 });
             }
         });
         
         const topProducto = Object.entries(ventasProductos).sort((a, b) => b[1] - a[1])[0];
-        const productoTopElement = document.getElementById('productoMasVendido');
-        if (productoTopElement) {
-            productoTopElement.innerHTML = topProducto ? `${topProducto[0]} (${topProducto[1]} uds)` : 'Sin ventas';
+        const productoTopEl = document.getElementById('productoMasVendido');
+        if (productoTopEl) {
+            productoTopEl.innerHTML = topProducto ? `${topProducto[0]} (${topProducto[1]} uds)` : 'Sin ventas';
         }
         
-        // ========== GRÁFICO DE VENTAS ==========
+        // Gráfico de ventas
         const ultimos7Dias = [];
         for (let i = 6; i >= 0; i--) {
             const fecha = new Date();
@@ -182,9 +171,7 @@ window.actualizarDashboard = async () => {
         
         const ctx = document.getElementById('ventasChart')?.getContext('2d');
         if (ctx) {
-            if (window.ventasChartInstance) {
-                window.ventasChartInstance.destroy();
-            }
+            if (window.ventasChartInstance) window.ventasChartInstance.destroy();
             window.ventasChartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -199,8 +186,7 @@ window.actualizarDashboard = async () => {
                         fill: true,
                         pointBackgroundColor: '#6366f1',
                         pointBorderColor: '#fff',
-                        pointRadius: 4,
-                        pointHoverRadius: 6
+                        pointRadius: 4
                     }]
                 },
                 options: {
@@ -221,7 +207,7 @@ window.actualizarDashboard = async () => {
             });
         }
         
-        // ========== TOP 5 PRODUCTOS ==========
+        // Top 5 productos
         const top5 = Object.entries(ventasProductos).sort((a, b) => b[1] - a[1]).slice(0, 5);
         const topContainer = document.getElementById('topProductos');
         if (topContainer) {
@@ -237,7 +223,7 @@ window.actualizarDashboard = async () => {
             }
         }
         
-        // ========== ACTIVIDAD RECIENTE ==========
+        // Actividad reciente
         const ultimasVentas = [...ventas].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).slice(0, 10);
         const activityContainer = document.getElementById('actividadReciente');
         if (activityContainer) {
@@ -264,11 +250,5 @@ window.actualizarDashboard = async () => {
     }
 };
 
-// Inicializar dashboard cuando el módulo esté listo
-if (typeof window !== 'undefined') {
-    setTimeout(() => {
-        if (document.getElementById('ventasHoy')) {
-            window.actualizarDashboard();
-        }
-    }, 500);
-}
+// Inicializar
+console.log('📊 Módulo Dashboard cargado');
