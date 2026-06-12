@@ -1,3 +1,7 @@
+/* ============================================
+   LOTO GAMES POS - ESTILOS COMPLETOS
+   ============================================ */
+
 :root {
     --primary: #6366f1;
     --primary-dark: #4f46e5;
@@ -19,9 +23,7 @@
     --border: #334155;
 }
 
-/* ============================================
-   BASE RESPONSIVE - MEJORAS TÁCTILES
-   ============================================ */
+/* Reset y base */
 * {
     margin: 0;
     padding: 0;
@@ -214,6 +216,7 @@ body {
     padding: 20px;
     border: 1px solid var(--border);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
 }
 
 .stat-card:hover {
@@ -300,17 +303,9 @@ td {
     color: white;
 }
 
-.btn-success:hover {
-    transform: translateY(-2px);
-}
-
 .btn-danger {
     background: var(--danger);
     color: white;
-}
-
-.btn-danger:hover {
-    transform: translateY(-2px);
 }
 
 .btn-warning {
@@ -393,6 +388,54 @@ td {
     color: var(--danger);
 }
 
+/* ========== LOGIN - ESTILOS ESPECÍFICOS ========== */
+#content {
+    min-height: 100vh;
+    width: 100%;
+}
+
+.pin-btn {
+    background: #1e293b !important;
+    border: 1px solid #334155 !important;
+    border-radius: 16px !important;
+    padding: 20px !important;
+    font-size: 28px !important;
+    font-weight: bold !important;
+    color: #f1f5f9 !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    min-width: 80px !important;
+    text-align: center !important;
+}
+
+.pin-btn:hover {
+    background: #334155 !important;
+    transform: scale(1.02) !important;
+}
+
+.pin-btn:active {
+    transform: scale(0.98) !important;
+}
+
+.pin-btn[data-num="clear"] {
+    background: #f59e0b !important;
+    border: none !important;
+}
+
+.pin-btn[data-num="enter"] {
+    background: #10b981 !important;
+    border: none !important;
+}
+
+#pinDisplay {
+    font-size: 48px !important;
+    font-weight: bold !important;
+    letter-spacing: 15px !important;
+    color: #818cf8 !important;
+    font-family: monospace !important;
+    text-align: center !important;
+}
+
 /* ========== SCROLLBAR ========== */
 ::-webkit-scrollbar {
     width: 8px;
@@ -416,49 +459,29 @@ td {
    RESPONSIVE DESIGN
    ============================================ */
 
-/* Tablets (max 1024px) */
+/* Tablets */
 @media (max-width: 1024px) {
-    .main-content {
-        padding: 15px;
-    }
-    
-    .content-area {
-        padding: 15px;
-    }
-    
-    .cards-grid {
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 15px;
-    }
-    
-    .stat-value {
-        font-size: 24px;
-    }
+    .content-area { padding: 15px; }
+    .cards-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+    .stat-value { font-size: 24px; }
 }
 
-/* Móviles (max 768px) */
+/* Móviles */
 @media (max-width: 768px) {
-    .app-container {
-        flex-direction: column;
-    }
+    .app-container { flex-direction: column; }
     
     .sidebar {
         width: 100%;
         height: auto;
         position: fixed;
         bottom: 0;
-        left: 0;
-        right: 0;
         z-index: 1000;
         background: var(--bg-dark);
         border-top: 1px solid var(--border);
-        border-right: none;
         padding: 8px 0;
     }
     
-    .logo-area {
-        display: none;
-    }
+    .logo-area { display: none; }
     
     .nav-menu {
         flex-direction: row;
@@ -477,180 +500,37 @@ td {
         min-width: 60px;
     }
     
-    .nav-item i {
-        width: auto;
-        font-size: 20px;
-    }
+    .nav-item i { font-size: 20px; }
+    .nav-item span { font-size: 10px; }
+    .sidebar-footer { display: none; }
     
-    .nav-item span {
-        font-size: 10px;
-    }
+    .main-content { margin-bottom: 70px; height: calc(100vh - 70px); }
+    .top-bar { flex-direction: column; gap: 10px; padding: 15px; }
+    .page-title h1 { font-size: 20px; }
+    .content-area { padding: 15px; }
+    .cards-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .stat-card { padding: 12px; }
+    .stat-value { font-size: 20px; }
     
-    .sidebar-footer {
-        display: none;
-    }
-    
-    .main-content {
-        margin-bottom: 70px;
-        height: calc(100vh - 70px);
-    }
-    
-    .top-bar {
-        flex-direction: column;
-        gap: 10px;
-        padding: 15px;
-    }
-    
-    .page-title h1 {
-        font-size: 20px;
-    }
-    
-    .page-title p {
-        font-size: 11px;
-    }
-    
-    .content-area {
-        padding: 15px;
-    }
-    
-    .cards-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
-    }
-    
-    .stat-card {
-        padding: 12px;
-    }
-    
-    .stat-icon {
-        width: 40px;
-        height: 40px;
-        font-size: 18px;
-        margin-bottom: 10px;
-    }
-    
-    .stat-value {
-        font-size: 20px;
-    }
-    
-    .stat-label {
-        font-size: 11px;
-    }
-    
-    table {
-        font-size: 12px;
-        min-width: 500px;
-    }
-    
-    th, td {
-        padding: 8px;
-    }
-    
-    .btn {
-        padding: 12px 16px;
-        font-size: 14px;
-    }
-    
-    .form-control {
-        padding: 12px;
-        font-size: 16px;
-    }
-    
-    .modal-content {
-        width: 95%;
-        padding: 20px;
-    }
+    .pin-btn { padding: 15px !important; font-size: 24px !important; min-width: 60px !important; }
+    #pinDisplay { font-size: 36px !important; letter-spacing: 10px !important; }
 }
 
-/* Móviles pequeños (max 480px) */
+/* Móviles pequeños */
 @media (max-width: 480px) {
-    .cards-grid {
-        grid-template-columns: 1fr;
-        gap: 10px;
-    }
-    
-    .top-bar {
-        padding: 12px;
-    }
-    
-    .content-area {
-        padding: 10px;
-    }
-    
-    .nav-item {
-        min-width: 50px;
-        padding: 6px 8px;
-    }
-    
-    .nav-item i {
-        font-size: 18px;
-    }
-    
-    .nav-item span {
-        font-size: 9px;
-    }
-    
-    .stat-value {
-        font-size: 18px;
-    }
-    
-    .btn {
-        padding: 10px 12px;
-        font-size: 13px;
-    }
+    .cards-grid { grid-template-columns: 1fr; }
+    .pin-btn { padding: 12px !important; font-size: 20px !important; min-width: 50px !important; }
+    #pinDisplay { font-size: 28px !important; letter-spacing: 8px !important; }
 }
 
-/* Pantallas grandes (4K) */
+/* Pantallas grandes */
 @media (min-width: 1920px) {
-    .content-area {
-        max-width: 1600px;
-        margin: 0 auto;
-    }
-    
-    .stat-value {
-        font-size: 40px;
-    }
+    .content-area { max-width: 1600px; margin: 0 auto; }
+    .stat-value { font-size: 40px; }
 }
 
-/* Mejoras táctiles para móvil */
+/* Mejoras táctiles */
 @media (hover: none) and (pointer: coarse) {
-    .btn, .nav-item, button, [onclick] {
-        cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-    }
-    
-    .btn:active, .nav-item:active {
-        transform: scale(0.97);
-        transition: transform 0.05s;
-    }
-    
-    button, .btn, .nav-item {
-        min-height: 44px;
-    }
-}
-
-/* Orientación horizontal en móvil */
-@media (max-width: 900px) and (orientation: landscape) {
-    .sidebar {
-        width: 70px;
-        height: 100vh;
-        position: fixed;
-        left: 0;
-        top: 0;
-        bottom: auto;
-    }
-    
-    .nav-menu {
-        flex-direction: column;
-        align-items: center;
-    }
-    
-    .nav-item span {
-        display: none;
-    }
-    
-    .main-content {
-        margin-bottom: 0;
-        margin-left: 70px;
-    }
+    .btn, .nav-item, button, .pin-btn { cursor: pointer; -webkit-tap-highlight-color: transparent; min-height: 44px; }
+    .btn:active, .nav-item:active, .pin-btn:active { transform: scale(0.97); transition: transform 0.05s; }
 }
