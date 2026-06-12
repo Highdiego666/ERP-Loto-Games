@@ -21,27 +21,6 @@
     
     <!-- Estilos principales -->
     <link rel="stylesheet" href="css/style.css">
-    
-    <style>
-        /* Estilos adicionales de respaldo */
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: var(--text-muted);
-        }
-        .error-module {
-            background: var(--bg-card);
-            border-radius: 16px;
-            padding: 40px;
-            text-align: center;
-            border: 1px solid var(--border);
-        }
-        .error-module i {
-            font-size: 48px;
-            color: var(--danger);
-            margin-bottom: 20px;
-        }
-    </style>
 </head>
 <body>
     <div class="app-container">
@@ -96,8 +75,8 @@
                 <div class="user-info-sidebar">
                     <i class="fas fa-user-circle"></i>
                     <div>
-                        <div class="user-name" id="userNameSidebar">Administrador</div>
-                        <div class="user-role" id="userRoleSidebar">Admin</div>
+                        <div class="user-name" id="userNameSidebar">Usuario</div>
+                        <div class="user-role" id="userRoleSidebar">Rol</div>
                     </div>
                 </div>
             </div>
@@ -131,7 +110,7 @@
         </main>
     </div>
     
-        <!-- ============================================ -->
+    <!-- ============================================ -->
     <!-- SUPABASE - BASE DE DATOS EN LA NUBE          -->
     <!-- ============================================ -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -164,40 +143,9 @@
     <!-- ============================================ -->
     <script src="js/app.js"></script>
     
-    <!-- ============================================ -->
-    <!-- VERIFICACIÓN DE CARGA                        -->
-    <!-- ============================================ -->
     <script>
-        (function verificarCarga() {
-            const startTime = Date.now();
-            
-            function checkModules() {
-                const modules = {
-                    'dashboard': typeof window.dashboardModule,
-                    'ventas': typeof window.ventasModule,
-                    'productos': typeof window.productosModule,
-                    'inventario': typeof window.inventarioModule,
-                    'servicios': typeof window.serviciosModule,
-                    'clientes': typeof window.clientesModule,
-                    'usuarios': typeof window.usuariosModule,
-                    'reportes': typeof window.reportesModule
-                };
-                
-                const allLoaded = Object.values(modules).every(t => t === 'function');
-                const elapsed = Date.now() - startTime;
-                
-                if (allLoaded) {
-                    console.log('✅ Todos los módulos cargados en', elapsed, 'ms');
-                    console.log('📦 Módulos:', modules);
-                } else {
-                    const missing = Object.entries(modules).filter(([k, v]) => v !== 'function').map(([k]) => k);
-                    console.warn('⚠️ Módulos faltantes:', missing);
-                    setTimeout(checkModules, 500);
-                }
-            }
-            
-            setTimeout(checkModules, 1000);
-        })();
+        // Verificación rápida de carga
+        console.log("✅ Index.html cargado correctamente");
     </script>
 </body>
 </html>
