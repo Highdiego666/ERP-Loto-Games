@@ -534,3 +534,58 @@ td {
     .btn, .nav-item, button, .pin-btn { cursor: pointer; -webkit-tap-highlight-color: transparent; min-height: 44px; }
     .btn:active, .nav-item:active, .pin-btn:active { transform: scale(0.97); transition: transform 0.05s; }
 }
+
+/* ============================================
+   LOGIN - ESTILOS FORZADOS
+   ============================================ */
+
+.pin-btn {
+    background: #1e293b !important;
+    border: 1px solid #334155 !important;
+    border-radius: 16px !important;
+    padding: 20px !important;
+    font-size: 28px !important;
+    font-weight: bold !important;
+    color: white !important;
+    cursor: pointer !important;
+    transition: all 0.2s !important;
+    min-width: 80px !important;
+}
+
+.pin-btn:hover {
+    background: #334155 !important;
+    transform: scale(1.02) !important;
+}
+
+.pin-btn:active {
+    transform: scale(0.98) !important;
+}
+
+.pin-btn[data-num="clear"] {
+    background: #f59e0b !important;
+}
+
+.pin-btn[data-num="enter"] {
+    background: #10b981 !important;
+}
+
+#pinDisplay {
+    font-size: 48px !important;
+    font-weight: bold !important;
+    letter-spacing: 15px !important;
+    color: #818cf8 !important;
+    font-family: monospace !important;
+}
+
+#loginRoot {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    z-index: 999999 !important;
+}
