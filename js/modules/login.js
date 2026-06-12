@@ -1,7 +1,3 @@
-// ============================================
-// LOTO GAMES POS - LOGIN CON PIN NUMÉRICO
-// ============================================
-
 const usuariosPIN = [
   { id: 1, nombre: "Administrador", pin: "1234", rol: "admin", email: "admin@lotogames.com" },
   { id: 2, nombre: "Soporte Técnico", pin: "1111", rol: "soporte", email: "soporte@lotogames.com" },
@@ -18,7 +14,7 @@ window.loginModule = () => {
           <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #6366f1, #ec4899); border-radius: 24px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
             <i class="fas fa-gamepad" style="font-size: 40px; color: white;"></i>
           </div>
-          <h2 style="color: #f1f5f9; font-size: 28px; margin-bottom: 5px;">LOTO GAMES POS</h2>
+          <h2 style="color: #f1f5f9; font-size: 28px;">LOTO GAMES POS</h2>
           <p style="color: #94a3b8;">Ingrese su PIN de 4 dígitos</p>
         </div>
         
@@ -30,18 +26,18 @@ window.loginModule = () => {
         </div>
         
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px;">
-          <button class="pin-btn" data-num="1" style="background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 20px; font-size: 28px; font-weight: bold; color: white; cursor: pointer;">1</button>
-          <button class="pin-btn" data-num="2" style="background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 20px; font-size: 28px; font-weight: bold; color: white; cursor: pointer;">2</button>
-          <button class="pin-btn" data-num="3" style="background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 20px; font-size: 28px; font-weight: bold; color: white; cursor: pointer;">3</button>
-          <button class="pin-btn" data-num="4" style="background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 20px; font-size: 28px; font-weight: bold; color: white; cursor: pointer;">4</button>
-          <button class="pin-btn" data-num="5" style="background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 20px; font-size: 28px; font-weight: bold; color: white; cursor: pointer;">5</button>
-          <button class="pin-btn" data-num="6" style="background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 20px; font-size: 28px; font-weight: bold; color: white; cursor: pointer;">6</button>
-          <button class="pin-btn" data-num="7" style="background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 20px; font-size: 28px; font-weight: bold; color: white; cursor: pointer;">7</button>
-          <button class="pin-btn" data-num="8" style="background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 20px; font-size: 28px; font-weight: bold; color: white; cursor: pointer;">8</button>
-          <button class="pin-btn" data-num="9" style="background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 20px; font-size: 28px; font-weight: bold; color: white; cursor: pointer;">9</button>
-          <button class="pin-btn" data-num="clear" style="background: #f59e0b; border: none; border-radius: 16px; padding: 20px; font-size: 18px; font-weight: bold; color: white; cursor: pointer;">⌫ Borrar</button>
-          <button class="pin-btn" data-num="0" style="background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 20px; font-size: 28px; font-weight: bold; color: white; cursor: pointer;">0</button>
-          <button class="pin-btn" data-num="enter" style="background: #10b981; border: none; border-radius: 16px; padding: 20px; font-size: 18px; font-weight: bold; color: white; cursor: pointer;">✓ Ingresar</button>
+          <button class="pin-btn" data-num="1">1</button>
+          <button class="pin-btn" data-num="2">2</button>
+          <button class="pin-btn" data-num="3">3</button>
+          <button class="pin-btn" data-num="4">4</button>
+          <button class="pin-btn" data-num="5">5</button>
+          <button class="pin-btn" data-num="6">6</button>
+          <button class="pin-btn" data-num="7">7</button>
+          <button class="pin-btn" data-num="8">8</button>
+          <button class="pin-btn" data-num="9">9</button>
+          <button class="pin-btn" data-num="clear">⌫ Borrar</button>
+          <button class="pin-btn" data-num="0">0</button>
+          <button class="pin-btn" data-num="enter">✓ Ingresar</button>
         </div>
         
         <div id="loginError" style="display: none; margin-top: 20px; padding: 12px; background: rgba(239,68,68,0.1); border: 1px solid #ef4444; border-radius: 12px; color: #ef4444; text-align: center;">❌ PIN incorrecto</div>
@@ -97,7 +93,11 @@ window.inicializarTecladoPIN = () => {
       
       if (num === 'clear') {
         pinIngresado = pinIngresado.slice(0, -1);
-        if (pinDisplay) pinDisplay.innerHTML = "•".repeat(pinIngresado.length) + "•".repeat(4 - pinIngresado.length);
+        if (pinDisplay) {
+          let display = "";
+          for (let i = 0; i < 4; i++) display += i < pinIngresado.length ? "●" : "•";
+          pinDisplay.innerHTML = display;
+        }
         if (messageDiv) messageDiv.innerHTML = "";
       } 
       else if (num === 'enter') {
@@ -105,7 +105,7 @@ window.inicializarTecladoPIN = () => {
           const result = window.verificarPIN(pinIngresado);
           if (result.success) {
             window.usuarioActual = result.usuario;
-            window.cargarSistemaLogin();
+            if (window.cargarSistemaLogin) window.cargarSistemaLogin(result.usuario);
           } else {
             if (errorDiv) errorDiv.style.display = "block";
             pinIngresado = "";
@@ -114,19 +114,27 @@ window.inicializarTecladoPIN = () => {
         } else if (messageDiv) {
           messageDiv.innerHTML = "Ingrese 4 dígitos";
           messageDiv.style.color = "#f59e0b";
+          setTimeout(() => { messageDiv.innerHTML = ""; }, 2000);
         }
       } 
       else if (pinIngresado.length < 4) {
         pinIngresado += num;
-        if (pinDisplay) pinDisplay.innerHTML = "•".repeat(pinIngresado.length) + "•".repeat(4 - pinIngresado.length);
+        if (pinDisplay) {
+          let display = "";
+          for (let i = 0; i < 4; i++) display += i < pinIngresado.length ? "●" : "•";
+          pinDisplay.innerHTML = display;
+        }
         if (messageDiv) messageDiv.innerHTML = "";
         if (pinIngresado.length === 4 && messageDiv) {
           messageDiv.innerHTML = "Presione Ingresar";
           messageDiv.style.color = "#10b981";
+          setTimeout(() => { if (messageDiv) messageDiv.innerHTML = ""; }, 2000);
         }
       }
     };
   });
+  
+  console.log("✅ Teclado inicializado");
 };
 
 console.log("✅ Login module loaded");
