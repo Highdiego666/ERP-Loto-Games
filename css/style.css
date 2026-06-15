@@ -1,3 +1,7 @@
+/* ============================================
+   LOTO GAMES POS - ESTILOS COMPLETOS
+   ============================================ */
+
 :root {
     --primary: #6366f1;
     --primary-dark: #4f46e5;
@@ -10,7 +14,6 @@
     --darker: #020617;
     --gray: #64748b;
     --gray-light: #94a3b8;
-    --gray-lighter: #e2e8f0;
     --bg-dark: #0f172a;
     --bg-card: #1e293b;
     --bg-sidebar: #0f172a;
@@ -71,8 +74,8 @@ body {
     font-size: 20px;
     font-weight: 800;
     background: linear-gradient(135deg, var(--primary-light), var(--secondary));
-    -webkit-background-clip: text;
     background-clip: text;
+    -webkit-background-clip: text;
     color: transparent;
 }
 
@@ -389,6 +392,7 @@ td {
     cursor: pointer !important;
     transition: all 0.2s !important;
     min-width: 80px !important;
+    text-align: center !important;
 }
 
 .pin-btn:hover {
@@ -436,4 +440,48 @@ td {
 
 ::-webkit-scrollbar-thumb:hover {
     background: var(--gray-light);
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+@media (max-width: 768px) {
+    .sidebar {
+        width: 80px;
+    }
+    .logo-text, .nav-item span, .sidebar-footer {
+        display: none;
+    }
+    .nav-item {
+        justify-content: center;
+        padding: 12px;
+    }
+    .content-area {
+        padding: 15px;
+    }
+    .cards-grid {
+        grid-template-columns: 1fr;
+    }
+    .pin-btn {
+        padding: 12px !important;
+        font-size: 22px !important;
+        min-width: 60px !important;
+    }
+    #pinDisplay {
+        font-size: 32px !important;
+        letter-spacing: 8px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .pin-btn {
+        padding: 10px !important;
+        font-size: 18px !important;
+        min-width: 50px !important;
+    }
+    #pinDisplay {
+        font-size: 28px !important;
+        letter-spacing: 5px !important;
+    }
 }
