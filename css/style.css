@@ -1,5 +1,5 @@
 /* ============================================
-   LOTO GAMES POS - ESTILOS COMPLETOS
+   LOTO GAMES POS - ESTILOS COMPLETOS (Firefox compatible)
    ============================================ */
 
 :root {
@@ -423,7 +423,7 @@ td {
     text-align: center !important;
 }
 
-/* Forzado extremo para que el login siempre sea visible */
+/* Forzado extremo para que el login siempre sea visible (sin selectores problemáticos) */
 #loginRoot {
     display: flex !important;
     visibility: visible !important;
