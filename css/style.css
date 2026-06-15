@@ -1,5 +1,5 @@
 /* ============================================
-   LOTO GAMES POS - ESTILOS COMPLETOS (Firefox compatible)
+   LOTO GAMES POS - ESTILOS PRINCIPALES (SIN LOGIN)
    ============================================ */
 
 :root {
@@ -380,65 +380,6 @@ td {
     color: var(--danger);
 }
 
-/* ========== LOGIN - ESTILOS DEL TECLADO Y VISIBILIDAD FORZADA ========== */
-.pin-btn {
-    background: #1e293b !important;
-    border: 1px solid #334155 !important;
-    border-radius: 16px !important;
-    padding: 20px !important;
-    font-size: 28px !important;
-    font-weight: bold !important;
-    color: white !important;
-    cursor: pointer !important;
-    transition: all 0.2s !important;
-    min-width: 80px !important;
-    text-align: center !important;
-}
-
-.pin-btn:hover {
-    background: #334155 !important;
-    transform: scale(1.02) !important;
-}
-
-.pin-btn:active {
-    transform: scale(0.98) !important;
-}
-
-.pin-btn[data-num="clear"] {
-    background: #f59e0b !important;
-    border: none !important;
-}
-
-.pin-btn[data-num="enter"] {
-    background: #10b981 !important;
-    border: none !important;
-}
-
-#pinDisplay {
-    font-size: 48px !important;
-    font-weight: bold !important;
-    letter-spacing: 15px !important;
-    color: #818cf8 !important;
-    font-family: monospace !important;
-    text-align: center !important;
-}
-
-/* Forzado extremo para que el login siempre sea visible (sin selectores problemáticos) */
-#loginRoot {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    z-index: 999999 !important;
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    background: linear-gradient(135deg, #0f172a, #1e293b) !important;
-    justify-content: center !important;
-    align-items: center !important;
-}
-
 /* ========== SCROLLBAR ========== */
 ::-webkit-scrollbar {
     width: 8px;
@@ -479,25 +420,10 @@ td {
     .cards-grid {
         grid-template-columns: 1fr;
     }
-    .pin-btn {
-        padding: 12px !important;
-        font-size: 22px !important;
-        min-width: 60px !important;
-    }
-    #pinDisplay {
-        font-size: 32px !important;
-        letter-spacing: 8px !important;
-    }
 }
 
 @media (max-width: 480px) {
-    .pin-btn {
-        padding: 10px !important;
-        font-size: 18px !important;
-        min-width: 50px !important;
-    }
-    #pinDisplay {
-        font-size: 28px !important;
-        letter-spacing: 5px !important;
+    .stat-value {
+        font-size: 24px;
     }
 }
