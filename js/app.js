@@ -5,62 +5,108 @@
 console.log('🚀 LOTO GAMES POS - Iniciando...');
 
 const content = document.getElementById('content');
-let currentModule = 'dashboard';
-let usuarioActual = null;
 
-// ========== FUNCIONES DE LOGIN ==========
+// Función para mostrar el login con teclado numérico
 function mostrarLogin() {
     console.log("🔐 Mostrando pantalla de login...");
     if (typeof window.loginModule === 'function') {
         content.innerHTML = window.loginModule();
+
+        // Inyectar estilos ultra agresivos para asegurar visibilidad en Firefox/Chrome
+        const style = document.createElement('style');
+        style.textContent = `
+            #loginRoot {
+                display: flex !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                background: linear-gradient(135deg, #0f172a, #1e293b) !important;
+                z-index: 999999 !important;
+                justify-content: center !important;
+                align-items: center !important;
+            }
+            .pin-btn {
+                background: #1e293b !important;
+                border: 1px solid #334155 !important;
+                border-radius: 16px !important;
+                padding: 20px !important;
+                font-size: 28px !important;
+                font-weight: bold !important;
+                color: white !important;
+                cursor: pointer !important;
+                min-width: 80px !important;
+                transition: all 0.2s !important;
+            }
+            .pin-btn:hover {
+                background: #334155 !important;
+                transform: scale(1.02) !important;
+            }
+            .pin-btn:active {
+                transform: scale(0.98) !important;
+            }
+            .pin-btn[data-num="clear"] {
+                background: #f59e0b !important;
+                border: none !important;
+            }
+            .pin-btn[data-num="enter"] {
+                background: #10b981 !important;
+                border: none !important;
+            }
+            #pinDisplay {
+                font-size: 48px !important;
+                letter-spacing: 15px !important;
+                color: #818cf8 !important;
+                font-family: monospace !important;
+                text-align: center !important;
+            }
+        `;
+        document.head.appendChild(style);
+
         setTimeout(() => {
-            if (window.inicializarTecladoPIN) {
-                window.inicializarTecladoPIN();
-                console.log("⌨️ Teclado inicializado");
+            if (window.inicializarTecladoPIN) window.inicializarTecladoPIN();
+            // Reforzar visibilidad por si acaso
+            const root = document.getElementById('loginRoot');
+            if (root) {
+                root.style.setProperty('display', 'flex', 'important');
+                root.style.setProperty('visibility', 'visible', 'important');
             }
         }, 100);
     } else {
-        console.error("❌ loginModule no disponible");
-        content.innerHTML = '<div style="text-align:center;padding:50px;color:white"><h2>Error</h2><p>Módulo de login no encontrado</p></div>';
+        content.innerHTML = '<div style="color:white;text-align:center;padding:50px"><h2>Error</h2><p>Módulo de login no disponible</p></div>';
     }
 }
 
-// Función llamada por login.js cuando el PIN es correcto
+// Función que llama login.js cuando el PIN es correcto
 window.cargarSistemaLogin = (usuario) => {
-    console.log("🎉 Cargando sistema para:", usuario.nombre, "Rol:", usuario.rol);
-    usuarioActual = usuario;
-    
+    console.log("🎉 Cargando sistema para:", usuario.nombre);
+    window.usuarioActual = usuario;
+
     // Mostrar sidebar y main content
     const sidebar = document.querySelector('.sidebar');
     const mainContent = document.querySelector('.main-content');
     if (sidebar) sidebar.style.display = 'flex';
     if (mainContent) mainContent.style.display = 'flex';
-    
-    // Actualizar información del usuario en la barra lateral
+
+    // Actualizar nombre en sidebar
     const userNameSpan = document.getElementById('userNameSidebar');
     const userRoleSpan = document.getElementById('userRoleSidebar');
     if (userNameSpan) userNameSpan.innerText = usuario.nombre;
-    if (userRoleSpan) userRoleSpan.innerText = window.getNombreRol ? window.getNombreRol(usuario.rol) : usuario.rol;
-    
-    // Ocultar el loading si existe
-    const loading = document.querySelector('.loading');
-    if (loading) loading.style.display = 'none';
-    
+    if (userRoleSpan) userRoleSpan.innerText = usuario.rol;
+
     // Cargar el dashboard
     cargarModulo('dashboard');
 };
 
-// ========== FUNCIONES DE MÓDULOS ==========
-async function cargarModulo(moduleName) {
-    currentModule = moduleName;
-    const moduleFunction = window[`${moduleName}Module`];
-    
-    console.log(`📦 Cargando módulo: ${moduleName}`, typeof moduleFunction === 'function' ? '✅' : '❌');
-    
-    if (typeof moduleFunction === 'function') {
-        content.innerHTML = moduleFunction();
-        
-        // Actualizar título de la página
+// Carga un módulo específico (dashboard, ventas, productos, etc.)
+function cargarModulo(moduleName) {
+    const fn = window[`${moduleName}Module`];
+    if (typeof fn === 'function') {
+        content.innerHTML = fn();
+
         const titles = {
             dashboard: 'Dashboard',
             ventas: 'Punto de Venta',
@@ -71,160 +117,98 @@ async function cargarModulo(moduleName) {
             usuarios: 'Usuarios',
             reportes: 'Reportes'
         };
-        const descriptions = {
-            dashboard: 'Visión general del negocio',
-            ventas: 'Registro de ventas y carrito',
-            productos: 'Gestión de productos e inventario',
-            inventario: 'Control de stock y carga masiva',
-            servicios: 'Gestión de reparaciones y mantenimiento',
-            clientes: 'Registro y gestión de clientes',
-            usuarios: 'Administración de usuarios y roles',
-            reportes: 'Estadísticas y análisis de ventas'
-        };
-        
-        const pageTitle = document.getElementById('pageTitle');
-        const pageDescription = document.getElementById('pageDescription');
-        if (pageTitle) pageTitle.innerText = titles[moduleName] || moduleName;
-        if (pageDescription) pageDescription.innerText = descriptions[moduleName] || 'Módulo del sistema';
-        
-        // Inicializar datos del módulo
-        setTimeout(async () => {
-            console.log(`🔄 Inicializando datos de: ${moduleName}`);
-            try {
-                switch(moduleName) {
-                    case 'dashboard':
-                        if (window.actualizarDashboard) await window.actualizarDashboard();
-                        break;
-                    case 'productos':
-                        if (window.cargarProductos) await window.cargarProductos();
-                        break;
-                    case 'ventas':
-                        if (window.cargarProductosVenta) await window.cargarProductosVenta();
-                        break;
-                    case 'inventario':
-                        if (window.cargarInventario) await window.cargarInventario();
-                        break;
-                    case 'servicios':
-                        if (window.cargarServicios) await window.cargarServicios();
-                        break;
-                    case 'clientes':
-                        if (window.cargarClientes) await window.cargarClientes();
-                        break;
-                    case 'usuarios':
-                        if (window.cargarUsuarios) await window.cargarUsuarios();
-                        break;
-                    case 'reportes':
-                        if (window.actualizarReportes) await window.actualizarReportes();
-                        break;
-                    default:
-                        console.log(`ℹ️ Módulo ${moduleName} sin inicialización específica`);
-                }
-            } catch (error) {
-                console.error(`❌ Error al inicializar ${moduleName}:`, error);
-            }
+        document.getElementById('pageTitle').innerText = titles[moduleName] || moduleName;
+
+        // Inicializar funciones específicas del módulo
+        setTimeout(() => {
+            if (moduleName === 'dashboard' && window.actualizarDashboard) window.actualizarDashboard();
+            if (moduleName === 'productos' && window.cargarProductos) window.cargarProductos();
+            if (moduleName === 'ventas' && window.cargarProductosVenta) window.cargarProductosVenta();
+            if (moduleName === 'inventario' && window.cargarInventario) window.cargarInventario();
+            if (moduleName === 'servicios' && window.cargarServicios) window.cargarServicios();
+            if (moduleName === 'clientes' && window.cargarClientes) window.cargarClientes();
+            if (moduleName === 'usuarios' && window.cargarUsuarios) window.cargarUsuarios();
+            if (moduleName === 'reportes' && window.actualizarReportes) window.actualizarReportes();
         }, 200);
     } else {
-        console.error(`❌ Módulo ${moduleName} no encontrado`);
-        content.innerHTML = `
-            <div class="error-module" style="background: var(--bg-card); border-radius: 16px; padding: 40px; text-align: center; border: 1px solid var(--border);">
-                <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: var(--danger); margin-bottom: 20px;"></i>
-                <h3>Módulo no disponible</h3>
-                <p style="color: var(--text-muted);">El módulo "${moduleName}" está en desarrollo o no se cargó correctamente.</p>
-            </div>
-        `;
+        console.warn(`Módulo ${moduleName} no encontrado`);
+        content.innerHTML = `<div style="padding:50px;text-align:center"><h3>Módulo en construcción</h3><p>${moduleName}</p></div>`;
     }
-    
-    // Actualizar navegación activa
+
+    // Marcar el ítem del menú como activo
     document.querySelectorAll('.nav-item').forEach(item => {
         item.classList.remove('active');
-        if (item.dataset.module === moduleName) {
-            item.classList.add('active');
-        }
+        if (item.dataset.module === moduleName) item.classList.add('active');
     });
 }
 
-// ========== EVENTOS Y CONFIGURACIÓN INICIAL ==========
+// Cerrar sesión
+window.cerrarSesion = () => {
+    if (confirm('¿Cerrar sesión?')) {
+        localStorage.removeItem('loto_session');
+        location.reload();
+    }
+};
+
+// Eventos al cargar el DOM
 document.addEventListener('DOMContentLoaded', () => {
     console.log('📄 DOM cargado');
-    
+
     // Ocultar sidebar y main content hasta login
     const sidebar = document.querySelector('.sidebar');
     const mainContent = document.querySelector('.main-content');
     if (sidebar) sidebar.style.display = 'none';
     if (mainContent) mainContent.style.display = 'none';
-    
-    // Verificar si hay sesión guardada
-    const session = window.verificarSesion ? window.verificarSesion() : null;
+
+    // Verificar si hay sesión activa
+    const session = localStorage.getItem('loto_session');
     if (session) {
-        console.log("🔄 Sesión existente para:", session.nombre);
-        window.cargarSistemaLogin(session);
+        const data = JSON.parse(session);
+        if (data.loggedIn && (Date.now() - data.timestamp) < 28800000) {
+            window.cargarSistemaLogin(data);
+        } else {
+            mostrarLogin();
+        }
     } else {
-        console.log("🔄 Sin sesión, mostrando login");
         mostrarLogin();
     }
-    
-    // Configurar eventos del menú (aunque el menú aún está oculto, se asignan los eventos)
-    const menuItems = document.querySelectorAll('.nav-item');
-    menuItems.forEach(item => {
+
+    // Asignar eventos de navegación a los ítems del menú
+    document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
             const module = item.dataset.module;
-            console.log(`🖱️ Click en: ${module}`);
-            cargarModulo(module);
+            if (module) cargarModulo(module);
         });
     });
 });
 
-// ========== FUNCIONES AUXILIARES ==========
-window.getNombreRol = (rol) => {
-    const roles = {
-        admin: 'Administrador',
-        soporte: 'Soporte Técnico',
-        vendedor: 'Vendedor',
-        tecnico: 'Técnico'
-    };
-    return roles[rol] || rol;
-};
-
-window.cerrarSesion = () => {
-    if (confirm('¿Cerrar sesión?')) {
-        if (window.logout) window.logout();
-        else {
-            localStorage.removeItem('loto_session');
-            location.reload();
-        }
-    }
-};
-
-// Agregar botón de cerrar sesión al sidebar (después de que el DOM esté listo y el sidebar visible)
+// Agregar botón de cerrar sesión al sidebar después de un breve retraso
 setTimeout(() => {
-    const sidebarFooter = document.querySelector('.sidebar-footer');
-    if (sidebarFooter && !document.getElementById('logoutBtn')) {
-        const logoutBtn = document.createElement('button');
-        logoutBtn.id = 'logoutBtn';
-        logoutBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Cerrar Sesión';
-        logoutBtn.style.cssText = 'background: var(--danger); color: white; border: none; padding: 12px; border-radius: 12px; width: 100%; margin-top: 15px; cursor: pointer; font-weight: bold; font-size: 14px; transition: all 0.2s;';
-        logoutBtn.onclick = () => window.cerrarSesion();
-        sidebarFooter.appendChild(logoutBtn);
+    const footer = document.querySelector('.sidebar-footer');
+    if (footer && !document.getElementById('logoutBtn')) {
+        const btn = document.createElement('button');
+        btn.id = 'logoutBtn';
+        btn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Cerrar Sesión';
+        btn.style.cssText = 'background: #ef4444; color: white; border: none; padding: 12px; border-radius: 12px; width: 100%; margin-top: 15px; cursor: pointer; font-weight: bold;';
+        btn.onclick = () => window.cerrarSesion();
+        footer.appendChild(btn);
     }
 }, 500);
 
-// Actualizar fecha y hora
+// Actualizar la fecha y hora en la barra superior
 function updateDateTime() {
-    const dateElement = document.getElementById('currentDate');
-    if (dateElement) {
-        const now = new Date();
-        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-        dateElement.innerText = now.toLocaleDateString('es-MX', options);
+    const el = document.getElementById('currentDate');
+    if (el) {
+        el.innerText = new Date().toLocaleDateString('es-MX', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
     }
 }
 updateDateTime();
 setInterval(updateDateTime, 60000);
-
-// Verificar conexión con Supabase (solo informativo)
-setTimeout(() => {
-    if (window.supabase) console.log('✅ Supabase conectado');
-    if (window.DB) console.log('✅ DB lista');
-}, 500);
 
 console.log('✅ Sistema listo');
