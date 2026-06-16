@@ -1,3 +1,7 @@
+// ============================================
+// LOTO GAMES POS - MÓDULO DE PRODUCTOS
+// ============================================
+
 // Variables globales
 let productosData = [];
 
@@ -90,13 +94,17 @@ window.productosModule = () => `
   </div>
 `;
 
+// ============================================
+// FUNCIONES EXISTENTES
+// ============================================
+
 // Cargar productos desde Supabase
 window.cargarProductos = async () => {
   productosData = await window.DB.getProductos();
   window.renderizarTablaProductos(productosData);
 };
 
-// Renderizar tabla
+// Renderizar tabla CON el botón de imprimir
 window.renderizarTablaProductos = (productos) => {
   const tbody = document.getElementById('tablaProductos');
   if (!tbody) return;
@@ -115,14 +123,17 @@ window.renderizarTablaProductos = (productos) => {
       <td><strong style="color: var(--success);">$${parseFloat(p.precio).toLocaleString()}</strong></td>
       <td style="${p.stock < 5 ? 'color: var(--danger); font-weight: bold;' : ''}">${p.stock} unidades</td>
       <td>
-        <button class="btn" style="background: var(--warning); padding: 5px 10px; margin-right: 5px;" onclick="window.editarProducto(${p.id})">
+        <button class="btn" style="background: var(--warning); padding: 5px 10px; margin-right: 3px;" onclick="window.editarProducto(${p.id})">
           <i class="fas fa-edit"></i>
         </button>
-        <button class="btn" style="background: var(--danger); padding: 5px 10px;" onclick="window.eliminarProducto(${p.id})">
+        <button class="btn" style="background: var(--danger); padding: 5px 10px; margin-right: 3px;" onclick="window.eliminarProducto(${p.id})">
           <i class="fas fa-trash"></i>
         </button>
+        <button class="btn" style="background: var(--success); padding: 5px 10px;" onclick="window.imprimirEtiqueta(${p.id})">
+          <i class="fas fa-print"></i>
+        </button>
       </td>
-    </table>
+    </tr>
   `).join('');
 };
 
@@ -186,7 +197,131 @@ window.eliminarProducto = async (id) => {
   }
 };
 
-// Guardar producto
+// ============================================
+// NUEVA FUNCIÓN: IMPRIMIR ETIQUETA
+// ============================================
+
+window.imprimirEtiqueta = function(id) {
+    // Buscar el producto en los datos cargados
+    const producto = productosData.find(p => p.id === id);
+    if (!producto) {
+        alert("❌ Producto no encontrado");
+        return;
+    }
+
+    // Usar el SKU como código de barras
+    const codigoBarras = producto.sku || producto.id.toString();
+
+    // Crear ventana de impresión
+    const win = window.open("", "_blank", "width=400,height=600");
+    if (!win) {
+        alert("⚠️ Permite ventanas emergentes para imprimir etiquetas");
+        return;
+    }
+
+    win.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Etiqueta - ${producto.nombre}</title>
+            <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
+            <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    min-height: 100vh;
+                    background: #f5f5f5;
+                    font-family: 'Arial', sans-serif;
+                }
+                .etiqueta {
+                    background: white;
+                    padding: 25px 30px;
+                    border-radius: 10px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    text-align: center;
+                    width: 350px;
+                    border: 1px solid #ddd;
+                }
+                .logo {
+                    font-size: 14px;
+                    font-weight: bold;
+                    color: #4f46e5;
+                    letter-spacing: 2px;
+                    margin-bottom: 8px;
+                }
+                .producto-nombre {
+                    font-size: 18px;
+                    font-weight: bold;
+                    margin: 8px 0 4px 0;
+                    color: #1e293b;
+                }
+                .producto-sku {
+                    font-size: 13px;
+                    color: #64748b;
+                    margin-bottom: 12px;
+                }
+                .producto-precio {
+                    font-size: 20px;
+                    font-weight: bold;
+                    color: #10b981;
+                    margin-bottom: 12px;
+                }
+                #barcode {
+                    margin: 10px auto;
+                    max-width: 100%;
+                }
+                .footer {
+                    margin-top: 12px;
+                    font-size: 11px;
+                    color: #94a3b8;
+                    border-top: 1px dashed #e2e8f0;
+                    padding-top: 10px;
+                }
+                @media print {
+                    body { background: white; }
+                    .etiqueta { box-shadow: none; border: 1px solid #ccc; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="etiqueta">
+                <div class="logo">🏪 LOTO GAMES</div>
+                <div class="producto-nombre">${producto.nombre}</div>
+                <div class="producto-sku">SKU: ${producto.sku}</div>
+                <div class="producto-precio">$${parseFloat(producto.precio).toLocaleString()}</div>
+                <svg id="barcode"></svg>
+                <div class="footer">
+                    ${producto.categoria || 'Producto'} • ${producto.tipo || 'General'}
+                </div>
+            </div>
+            <script>
+                JsBarcode("#barcode", "${codigoBarras}", {
+                    format: "CODE128",
+                    width: 2,
+                    height: 80,
+                    displayValue: true,
+                    fontSize: 16,
+                    textMargin: 5,
+                    background: "#ffffff",
+                    lineColor: "#000000"
+                });
+                setTimeout(function() {
+                    window.print();
+                }, 800);
+            <\/script>
+        </body>
+        </html>
+    `);
+    win.document.close();
+};
+
+// ============================================
+// GUARDAR PRODUCTO (sin cambios)
+// ============================================
+
 document.addEventListener('submit', async (e) => {
   if (e.target.id === 'formProducto') {
     e.preventDefault();
@@ -202,7 +337,7 @@ document.addEventListener('submit', async (e) => {
       alert('✅ Producto actualizado');
     } else {
       const sku = `LOT-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-      const codigoBarras = `750${Math.floor(Math.random() * 1000000000)}`;
+      const codigoBarras = sku; // Usar SKU como código de barras
       await window.DB.saveProducto({ nombre, categoria, tipo, precio, stock, sku, codigoBarras });
       alert('✅ Producto creado');
     }
@@ -213,10 +348,14 @@ document.addEventListener('submit', async (e) => {
   }
 });
 
-// Inicializar
+// ============================================
+// INICIALIZAR
+// ============================================
+
 setTimeout(() => {
   if (document.getElementById('tablaProductos')) {
     window.cargarProductos();
   }
 }, 100);
 
+console.log("✅ Módulo de productos cargado con impresión de etiquetas");
