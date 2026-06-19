@@ -108,7 +108,6 @@ const DB = {
                     .insert([{
                         items: venta.items,
                         subtotal: venta.subtotal,
-                        iva: venta.iva,
                         total: venta.total,
                         metodo_pago: venta.metodoPago,
                         comentario: venta.comentario || '',

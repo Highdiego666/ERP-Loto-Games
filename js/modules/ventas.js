@@ -1,4 +1,7 @@
-// Carrito global
+// ============================================
+// LOTO GAMES POS - MÓDULO DE VENTAS (SIN IVA)
+// ============================================
+
 let carritoVentas = [];
 
 window.ventasModule = () => `
@@ -36,15 +39,7 @@ window.ventasModule = () => `
         <hr style="margin: 15px 0;">
         
         <div style="margin-bottom: 15px;">
-          <div style="display: flex; justify-content: space-between;">
-            <span>Subtotal:</span>
-            <span id="subtotalCarrito">$0</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; margin-top: 5px;">
-            <span>IVA (16%):</span>
-            <span id="ivaCarrito">$0</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; font-size: 20px; font-weight: bold; margin-top: 10px;">
+          <div style="display: flex; justify-content: space-between; font-size: 20px; font-weight: bold;">
             <span>TOTAL:</span>
             <span id="totalCarrito" style="color: var(--success);">$0</span>
           </div>
@@ -227,16 +222,14 @@ window.renderCarritoVentas = () => {
   
   if (carritoVentas.length === 0) {
     container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">🛒 Carrito vacío</p>';
-    document.getElementById('subtotalCarrito').innerHTML = '$0';
-    document.getElementById('ivaCarrito').innerHTML = '$0';
     document.getElementById('totalCarrito').innerHTML = '$0';
     return;
   }
   
-  let subtotal = 0;
+  let total = 0;
   container.innerHTML = carritoVentas.map((item, index) => {
     const itemTotal = item.precio * item.cantidad;
-    subtotal += itemTotal;
+    total += itemTotal;
     return `
       <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border);">
         <div style="flex: 2;">
@@ -262,11 +255,6 @@ window.renderCarritoVentas = () => {
     `;
   }).join('');
   
-  const iva = subtotal * 0.16;
-  const total = subtotal + iva;
-  
-  document.getElementById('subtotalCarrito').innerHTML = `$${subtotal.toLocaleString()}`;
-  document.getElementById('ivaCarrito').innerHTML = `$${iva.toLocaleString()}`;
   document.getElementById('totalCarrito').innerHTML = `$${total.toLocaleString()}`;
 };
 
@@ -322,20 +310,16 @@ window.finalizarVenta = async () => {
   const metodoPago = document.getElementById('metodoPagoVenta').value;
   const comentario = document.getElementById('comentarioVenta').value;
   
-  const subtotal = carritoVentas.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-  
-  
+  const total = carritoVentas.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
   
   const resumen = carritoVentas.map(item => 
     `${item.nombre} x${item.cantidad} = $${(item.precio * item.cantidad).toLocaleString()}`
   ).join('\n');
   
-  if (confirm(`📋 CONFIRMAR VENTA\n\n${resumen}\n\nSubtotal: $${subtotal.toLocaleString()}\nIVA: $${iva.toLocaleString()}\nTOTAL: $${total.toLocaleString()}\n\nMétodo: ${metodoPago}\n\n¿Confirmar?`)) {
+  if (confirm(`📋 CONFIRMAR VENTA\n\n${resumen}\n\nTOTAL: $${total.toLocaleString()}\n\nMétodo: ${metodoPago}\n\n¿Confirmar?`)) {
     
     const venta = {
       items: [...carritoVentas],
-      subtotal: subtotal,
-      iva: iva,
       total: total,
       metodoPago: metodoPago,
       comentario: comentario
