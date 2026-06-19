@@ -1,8 +1,10 @@
 // ============================================
-// LOTO GAMES POS - MÓDULO DE VENTAS (SIN IVA)
+// LOTO GAMES POS - MÓDULO DE VENTAS
+// CON 5% AUTOMÁTICO Y DESCUENTO OPCIONAL
 // ============================================
 
 let carritoVentas = [];
+let descuentoActivo = false; // Controla si se aplica el descuento del 5%
 
 window.ventasModule = () => `
   <div style="display: grid; grid-template-columns: 1fr 400px; gap: 24px;">
@@ -45,6 +47,14 @@ window.ventasModule = () => `
           </div>
         </div>
         
+        <!-- Botón de descuento -->
+        <div style="margin-bottom: 15px; padding: 10px; background: rgba(16, 185, 129, 0.1); border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
+          <span><strong>🎯 Descuento 5%</strong></span>
+          <button id="btnDescuento" class="btn" style="background: var(--gray); color: white; padding: 8px 16px;" onclick="window.toggleDescuento()">
+            Activar
+          </button>
+        </div>
+        
         <div style="margin-bottom: 15px;">
           <label>💳 Método de Pago:</label>
           <select id="metodoPagoVenta" class="form-control" style="margin-top: 5px;">
@@ -82,7 +92,18 @@ window.ventasModule = () => `
   </div>
 `;
 
-// Cargar productos para venta
+// Función para activar/desactivar descuento
+window.toggleDescuento = () => {
+  descuentoActivo = !descuentoActivo;
+  const btn = document.getElementById('btnDescuento');
+  if (btn) {
+    btn.style.background = descuentoActivo ? 'var(--success)' : 'var(--gray)';
+    btn.innerText = descuentoActivo ? 'Activo ✅' : 'Activar';
+  }
+  window.renderCarritoVentas();
+};
+
+// Cargar productos para venta (muestra precio con 5% incluido)
 window.cargarProductosVenta = async () => {
   const productos = await window.DB.getProductos();
   const productosConStock = productos.filter(p => p.stock > 0);
@@ -94,17 +115,21 @@ window.cargarProductosVenta = async () => {
     return;
   }
   
-  container.innerHTML = productosConStock.map(p => `
-    <div style="background: var(--bg-dark); padding: 12px; border-radius: 10px; cursor: pointer; transition: all 0.2s;" onclick="window.agregarAlCarrito(${p.id})">
-      <div style="font-weight: bold; font-size: 14px;">${p.nombre}</div>
-      <div style="color: var(--success); font-size: 18px;">$${parseFloat(p.precio).toLocaleString()}</div>
-      <small style="color: var(--text-muted);">SKU: ${p.sku}</small>
-      <div style="font-size: 11px;">Stock: ${p.stock}</div>
-    </div>
-  `).join('');
+  container.innerHTML = productosConStock.map(p => {
+    const precioBase = parseFloat(p.precio);
+    const precioConRecargo = precioBase * 1.05;
+    return `
+      <div style="background: var(--bg-dark); padding: 12px; border-radius: 10px; cursor: pointer; transition: all 0.2s;" onclick="window.agregarAlCarrito(${p.id})">
+        <div style="font-weight: bold; font-size: 14px;">${p.nombre}</div>
+        <div style="color: var(--success); font-size: 18px;">$${precioConRecargo.toFixed(2)}</div>
+        <small style="color: var(--text-muted);">SKU: ${p.sku}</small>
+        <div style="font-size: 11px;">Stock: ${p.stock}</div>
+      </div>
+    `;
+  }).join('');
 };
 
-// Buscar producto
+// Buscar producto (muestra precio con 5% incluido)
 window.buscarProductoVenta = async () => {
   const busqueda = document.getElementById('buscadorProducto').value.trim().toLowerCase();
   if (!busqueda) {
@@ -122,13 +147,15 @@ window.buscarProductoVenta = async () => {
   const resultadoDiv = document.getElementById('resultadoBusqueda');
   
   if (producto && producto.stock > 0) {
+    const precioBase = parseFloat(producto.precio);
+    const precioConRecargo = precioBase * 1.05;
     resultadoDiv.innerHTML = `
       <div style="background: var(--bg-card); padding: 15px; border-radius: 10px; border-left: 4px solid var(--success);">
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <div>
             <strong style="font-size: 16px;">${producto.nombre}</strong><br>
             <small>SKU: ${producto.sku} | Código: ${producto.codigo_barras}</small><br>
-            <strong style="color: var(--success);">$${parseFloat(producto.precio).toLocaleString()}</strong>
+            <strong style="color: var(--success);">$${precioConRecargo.toFixed(2)}</strong>
             <span style="color: var(--text-muted);"> | Stock: ${producto.stock}</span>
           </div>
           <button class="btn btn-success" onclick="window.agregarAlCarrito(${producto.id})">
@@ -149,7 +176,7 @@ window.buscarProductoVenta = async () => {
   }
 };
 
-// Agregar al carrito
+// Agregar al carrito (guarda precio base y calcula recargo al mostrar)
 window.agregarAlCarrito = async (id) => {
   const productos = await window.DB.getProductos();
   const producto = productos.find(p => p.id == id);
@@ -164,6 +191,7 @@ window.agregarAlCarrito = async (id) => {
     return;
   }
   
+  const precioBase = parseFloat(producto.precio);
   const existente = carritoVentas.find(item => item.id === id && item.tipo === 'producto');
   if (existente) {
     if (existente.cantidad + 1 > producto.stock) {
@@ -175,7 +203,7 @@ window.agregarAlCarrito = async (id) => {
     carritoVentas.push({
       id: producto.id,
       nombre: producto.nombre,
-      precio: parseFloat(producto.precio),
+      precioBase: precioBase,          // Precio sin recargo
       cantidad: 1,
       sku: producto.sku,
       tipo: 'producto'
@@ -187,7 +215,7 @@ window.agregarAlCarrito = async (id) => {
   document.getElementById('resultadoBusqueda').innerHTML = '';
 };
 
-// Venta rápida
+// Venta rápida (el monto ya incluye el 5% si se desea, pero se guarda como precioBase)
 window.agregarVentaRapida = () => {
   const concepto = document.getElementById('ventaRapidaConcepto').value.trim();
   const monto = parseFloat(document.getElementById('ventaRapidaMonto').value);
@@ -201,10 +229,11 @@ window.agregarVentaRapida = () => {
     return;
   }
   
+  // Para venta rápida, el precio base es el monto ingresado (sin recargo adicional)
   carritoVentas.push({
     id: Date.now(),
     nombre: `🔧 ${concepto}`,
-    precio: monto,
+    precioBase: monto,
     cantidad: 1,
     sku: 'RAPIDA',
     tipo: 'rapida'
@@ -226,15 +255,23 @@ window.renderCarritoVentas = () => {
     return;
   }
   
-  let total = 0;
+  let totalBase = 0;        // Suma de precios base
+  let totalConRecargo = 0;  // Suma de precios con 5% incluido
+  
   container.innerHTML = carritoVentas.map((item, index) => {
-    const itemTotal = item.precio * item.cantidad;
-    total += itemTotal;
+    const precioBase = item.precioBase;
+    const precioConRecargo = precioBase * 1.05;
+    const itemTotalBase = precioBase * item.cantidad;
+    const itemTotalRecargo = precioConRecargo * item.cantidad;
+    
+    totalBase += itemTotalBase;
+    totalConRecargo += itemTotalRecargo;
+    
     return `
       <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border);">
         <div style="flex: 2;">
           <strong>${item.nombre}</strong><br>
-          <small>$${item.precio.toLocaleString()} c/u</small>
+          <small>$${precioConRecargo.toFixed(2)} c/u</small>
         </div>
         <div style="flex: 1; text-align: center;">
           ${item.tipo === 'producto' ? `
@@ -244,7 +281,7 @@ window.renderCarritoVentas = () => {
           ` : `<span>1</span>`}
         </div>
         <div style="flex: 1; text-align: right;">
-          $${itemTotal.toLocaleString()}
+          $${itemTotalRecargo.toFixed(2)}
         </div>
         <div>
           <button onclick="window.eliminarDelCarrito(${index})" style="background: var(--danger); border: none; width: 30px; height: 30px; border-radius: 5px; cursor: pointer; margin-left: 10px;">
@@ -255,7 +292,12 @@ window.renderCarritoVentas = () => {
     `;
   }).join('');
   
-  document.getElementById('totalCarrito').innerHTML = `$${total.toLocaleString()}`;
+  // Determinar total a mostrar según descuento activo
+  let totalMostrar = descuentoActivo ? totalBase : totalConRecargo;
+  document.getElementById('totalCarrito').innerHTML = `$${totalMostrar.toFixed(2)}`;
+  
+  // Guardar totales para usarlos al finalizar venta
+  window._totalesCarrito = { totalBase, totalConRecargo };
 };
 
 // Modificar cantidad
@@ -296,6 +338,12 @@ window.limpiarCarrito = () => {
   if (carritoVentas.length === 0) return;
   if (confirm('¿Vaciar todo el carrito?')) {
     carritoVentas = [];
+    descuentoActivo = false;
+    const btn = document.getElementById('btnDescuento');
+    if (btn) {
+      btn.style.background = 'var(--gray)';
+      btn.innerText = 'Activar';
+    }
     window.renderCarritoVentas();
   }
 };
@@ -310,27 +358,41 @@ window.finalizarVenta = async () => {
   const metodoPago = document.getElementById('metodoPagoVenta').value;
   const comentario = document.getElementById('comentarioVenta').value;
   
-  const total = carritoVentas.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+  const { totalBase, totalConRecargo } = window._totalesCarrito;
+  const totalFinal = descuentoActivo ? totalBase : totalConRecargo;
   
-  const resumen = carritoVentas.map(item => 
-    `${item.nombre} x${item.cantidad} = $${(item.precio * item.cantidad).toLocaleString()}`
-  ).join('\n');
+  const resumen = carritoVentas.map(item => {
+    const precioConRecargo = item.precioBase * 1.05;
+    const subtotal = descuentoActivo ? (item.precioBase * item.cantidad) : (precioConRecargo * item.cantidad);
+    return `${item.nombre} x${item.cantidad} = $${subtotal.toFixed(2)}`;
+  }).join('\n');
   
-  if (confirm(`📋 CONFIRMAR VENTA\n\n${resumen}\n\nTOTAL: $${total.toLocaleString()}\n\nMétodo: ${metodoPago}\n\n¿Confirmar?`)) {
-    
+  const mensaje = `📋 CONFIRMAR VENTA\n\n${resumen}\n\nTOTAL: $${totalFinal.toFixed(2)}\n\nMétodo: ${metodoPago}\n${descuentoActivo ? '✅ Descuento 5% aplicado' : ''}\n\n¿Confirmar?`;
+  
+  if (confirm(mensaje)) {
     const venta = {
-      items: [...carritoVentas],
-      total: total,
+      items: carritoVentas.map(item => ({
+        ...item,
+        precioAplicado: descuentoActivo ? item.precioBase : item.precioBase * 1.05
+      })),
+      total: totalFinal,
       metodoPago: metodoPago,
-      comentario: comentario
+      comentario: comentario,
+      descuentoAplicado: descuentoActivo
     };
     
     await window.DB.registrarVenta(venta);
     carritoVentas = [];
+    descuentoActivo = false;
+    const btn = document.getElementById('btnDescuento');
+    if (btn) {
+      btn.style.background = 'var(--gray)';
+      btn.innerText = 'Activar';
+    }
     window.renderCarritoVentas();
     await window.cargarProductosVenta();
     document.getElementById('comentarioVenta').value = '';
     
-    alert(`✅ Venta realizada con éxito\n\nTotal: $${total.toLocaleString()}`);
+    alert(`✅ Venta realizada con éxito\n\nTotal: $${totalFinal.toFixed(2)}`);
   }
 };
