@@ -1,96 +1,133 @@
-window.serviciosModule = () => `
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-    <div>
-      <h2>🔧 Servicio Técnico</h2>
-      <p style="color: var(--text-muted);">Gestión de reparaciones y mantenimiento</p>
-    </div>
-    <button class="btn btn-primary" onclick="window.mostrarModalServicio()">
-      <i class="fas fa-plus"></i> Nueva Orden
-    </button>
-  </div>
-  
-  <div class="cards-grid">
-    <div class="stat-card" onclick="window.filtrarServicios('todos')" style="cursor:pointer;">
-      <div class="stat-value" id="totalServicios">0</div>
-      <div class="stat-label">Total</div>
-    </div>
-    <div class="stat-card" onclick="window.filtrarServicios('pendiente')" style="cursor:pointer;">
-      <div class="stat-value" id="serviciosPendientes">0</div>
-      <div class="stat-label">⏳ Pendientes</div>
-    </div>
-    <div class="stat-card" onclick="window.filtrarServicios('completado')" style="cursor:pointer;">
-      <div class="stat-value" id="serviciosCompletados">0</div>
-      <div class="stat-label">✅ Completados</div>
-    </div>
-  </div>
-  
-  <div class="table-container">
-    <div style="margin-bottom: 20px;">
-      <input type="text" id="buscarServicio" class="form-control" placeholder="🔍 Buscar por equipo o cliente..." onkeyup="window.buscarServicio()">
-    </div>
-    <div style="overflow-x: auto;">
-      <table style="width: 100%;">
-        <thead>
-          <tr><th>ID</th><th>Fecha</th><th>Cliente</th><th>Equipo</th><th>Problema</th><th>Estado</th><th>Precio</th><th>Acciones</th></tr>
-        </thead>
-        <tbody id="tablaServicios"></tbody>
-      </table>
-    </div>
-  </div>
-  
-  <div id="modalServicio" class="modal">
-    <div class="modal-content" style="max-width: 550px;">
-      <div class="modal-header">
-        <h3 id="modalServicioTitulo">Nueva Orden</h3>
-        <span class="close-modal" onclick="window.cerrarModalServicio()">&times;</span>
+// ============================================
+// LOTO GAMES POS - SERVICIO TÉCNICO (ACTUALIZADO)
+// ============================================
+
+window.serviciosModule = () => {
+  return `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+      <div>
+        <h2>🔧 Servicio Técnico</h2>
+        <p style="color: var(--text-muted);">Gestión de reparaciones y mantenimiento</p>
       </div>
-      <form id="formServicio">
-        <input type="hidden" id="servicioId">
-        <div class="form-group">
-          <label>Cliente</label>
-          <select id="servicioCliente" class="form-control"></select>
-          <button type="button" class="btn" style="margin-top:5px; width:100%;" onclick="window.abrirModalClienteRapido()">+ Nuevo Cliente</button>
-        </div>
-        <div class="form-group">
-          <label>Equipo / Consola</label>
-          <input type="text" id="servicioEquipo" class="form-control" required>
-        </div>
-        <div class="form-group">
-          <label>Problema reportado</label>
-          <textarea id="servicioProblema" class="form-control" rows="2" required></textarea>
-        </div>
-        <div class="form-group">
-          <label>Diagnóstico</label>
-          <textarea id="servicioDiagnostico" class="form-control" rows="2"></textarea>
-        </div>
-        <div class="form-group">
-          <label>Estado</label>
-          <select id="servicioEstado" class="form-control">
-            <option value="pendiente">⏳ Pendiente</option>
-            <option value="en_progreso">🔧 En progreso</option>
-            <option value="completado">✅ Completado</option>
-            <option value="entregado">📦 Entregado</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Precio / Cotización</label>
-          <input type="number" id="servicioPrecio" class="form-control">
-        </div>
-        <button type="submit" class="btn btn-primary" style="width:100%">Guardar</button>
-      </form>
+      <button class="btn btn-primary" onclick="window.mostrarModalServicio()">
+        <i class="fas fa-plus"></i> Nueva Orden
+      </button>
     </div>
-  </div>
-`;
+    
+    <div class="cards-grid">
+      <div class="stat-card" onclick="window.filtrarServicios('todos')" style="cursor:pointer;">
+        <div class="stat-value" id="totalServicios">0</div>
+        <div class="stat-label">Total</div>
+      </div>
+      <div class="stat-card" onclick="window.filtrarServicios('pendiente')" style="cursor:pointer;">
+        <div class="stat-value" id="serviciosPendientes">0</div>
+        <div class="stat-label">⏳ Pendientes</div>
+      </div>
+      <div class="stat-card" onclick="window.filtrarServicios('completado')" style="cursor:pointer;">
+        <div class="stat-value" id="serviciosCompletados">0</div>
+        <div class="stat-label">✅ Completados</div>
+      </div>
+    </div>
+    
+    <div class="table-container">
+      <div style="margin-bottom: 20px;">
+        <input type="text" id="buscarServicio" class="form-control" placeholder="🔍 Buscar por equipo o cliente..." onkeyup="window.buscarServicio()">
+      </div>
+      <div style="overflow-x: auto;">
+        <table style="width: 100%;">
+          <thead>
+            <tr><th>ID</th><th>Fecha</th><th>Cliente</th><th>Equipo</th><th>Problema</th><th>Estado</th><th>Técnico</th><th>Entregó</th><th>Precio</th><th>Acciones</th></tr>
+          </thead>
+          <tbody id="tablaServicios"></tbody>
+        </table>
+      </div>
+    </div>
+    
+    <div id="modalServicio" class="modal">
+      <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+          <h3 id="modalServicioTitulo">Nueva Orden</h3>
+          <span class="close-modal" onclick="window.cerrarModalServicio()">&times;</span>
+        </div>
+        <form id="formServicio">
+          <input type="hidden" id="servicioId">
+          <div class="form-group">
+            <label>Cliente</label>
+            <select id="servicioCliente" class="form-control"></select>
+            <button type="button" class="btn" style="margin-top:5px; width:100%;" onclick="window.abrirModalClienteRapido()">+ Nuevo Cliente</button>
+          </div>
+          <div class="form-group">
+            <label>Equipo / Consola</label>
+            <input type="text" id="servicioEquipo" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label>Problema reportado</label>
+            <textarea id="servicioProblema" class="form-control" rows="2" required></textarea>
+          </div>
+          <div class="form-group">
+            <label>Diagnóstico</label>
+            <textarea id="servicioDiagnostico" class="form-control" rows="2"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Estado</label>
+            <select id="servicioEstado" class="form-control">
+              <option value="pendiente">⏳ Pendiente</option>
+              <option value="en_progreso">🔧 En progreso</option>
+              <option value="completado">✅ Completado</option>
+              <option value="entregado">📦 Entregado</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Técnico Asignado</label>
+            <select id="servicioTecnico" class="form-control">
+              <option value="">Seleccionar técnico</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Entregado por</label>
+            <select id="servicioEntregadoPor" class="form-control">
+              <option value="">Seleccionar quien entrega</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Precio / Cotización</label>
+            <input type="number" id="servicioPrecio" class="form-control">
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%">Guardar</button>
+        </form>
+      </div>
+    </div>
+  `;
+};
 
 let serviciosData = [];
 let currentFiltro = 'todos';
 
+// Obtener lista de usuarios para técnicos y entregas
+async function obtenerUsuarios() {
+  try {
+    const usuarios = await window.DB.getUsuarios();
+    return usuarios.map(u => ({ id: u.id, nombre: u.nombre }));
+  } catch(e) {
+    // Si falla, usar lista fija
+    return [
+      { id: 1, nombre: 'Admin' },
+      { id: 2, nombre: 'Soporte' },
+      { id: 3, nombre: 'Técnico' }
+    ];
+  }
+}
+
 window.cargarServicios = async () => {
-  serviciosData = await window.DB.getServicios();
-  document.getElementById('totalServicios').innerHTML = serviciosData.length;
-  document.getElementById('serviciosPendientes').innerHTML = serviciosData.filter(s => s.estado === 'pendiente').length;
-  document.getElementById('serviciosCompletados').innerHTML = serviciosData.filter(s => s.estado === 'completado' || s.estado === 'entregado').length;
-  window.renderizarServicios();
+  try {
+    serviciosData = await window.DB.getServicios();
+    document.getElementById('totalServicios').innerHTML = serviciosData.length;
+    document.getElementById('serviciosPendientes').innerHTML = serviciosData.filter(s => s.estado === 'pendiente').length;
+    document.getElementById('serviciosCompletados').innerHTML = serviciosData.filter(s => s.estado === 'completado' || s.estado === 'entregado').length;
+    window.renderizarServicios();
+  } catch (error) {
+    console.error("Error al cargar servicios:", error);
+  }
 };
 
 window.renderizarServicios = () => {
@@ -101,20 +138,23 @@ window.renderizarServicios = () => {
   const tbody = document.getElementById('tablaServicios');
   if (!tbody) return;
   if (filtrados.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No hay servicios</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">No hay servicios</td</tr>';
     return;
   }
   tbody.innerHTML = filtrados.map(s => `
     <tr>
       <td>#${s.id}</td>
-      <td>${new Date(s.createdAt).toLocaleDateString()}</td>
+      <td>${new Date(s.createdAt || s.created_at).toLocaleDateString()}</td>
       <td>${s.cliente_nombre || '-'}</td>
       <td>${s.equipo || '-'}</td>
       <td>${(s.problema || '').substring(0, 30)}${s.problema?.length > 30 ? '...' : ''}</td>
       <td>${window.getEstadoBadge(s.estado)}</td>
+      <td>${s.tecnico_asignado || '-'}</td>
+      <td>${s.entregado_por || '-'}</td>
       <td>$${(s.precio || 0).toLocaleString()}</td>
       <td>
         <button class="btn" style="background:var(--warning);padding:5px 10px;" onclick="window.editarServicio(${s.id})">✏️</button>
+        <button class="btn" style="background:var(--danger);padding:5px 10px;" onclick="window.eliminarServicio(${s.id})">🗑️</button>
       </td>
     </tr>
   `).join('');
@@ -151,13 +191,26 @@ window.mostrarModalServicio = async () => {
   document.getElementById('modalServicioTitulo').innerText = 'Nueva Orden';
   document.getElementById('servicioId').value = '';
   document.getElementById('formServicio').reset();
+  
+  // Cargar clientes
   const clientes = await window.DB.getClientes();
-  const select = document.getElementById('servicioCliente');
-  select.innerHTML = '<option value="">Seleccionar cliente</option>' + clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+  const selectCliente = document.getElementById('servicioCliente');
+  selectCliente.innerHTML = '<option value="">Seleccionar cliente</option>' + clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+  
+  // Cargar usuarios para técnico y entrega
+  const usuarios = await obtenerUsuarios();
+  const selectTecnico = document.getElementById('servicioTecnico');
+  const selectEntregado = document.getElementById('servicioEntregadoPor');
+  const opciones = usuarios.map(u => `<option value="${u.nombre}">${u.nombre}</option>`).join('');
+  selectTecnico.innerHTML = `<option value="">Seleccionar técnico</option>${opciones}`;
+  selectEntregado.innerHTML = `<option value="">Seleccionar quien entrega</option>${opciones}`;
+  
   document.getElementById('modalServicio').style.display = 'flex';
 };
 
-window.cerrarModalServicio = () => document.getElementById('modalServicio').style.display = 'none';
+window.cerrarModalServicio = () => {
+  document.getElementById('modalServicio').style.display = 'none';
+};
 
 window.abrirModalClienteRapido = () => {
   const nombre = prompt('Nombre del cliente:');
@@ -182,11 +235,31 @@ window.editarServicio = async (id) => {
     document.getElementById('servicioDiagnostico').value = servicio.diagnostico || '';
     document.getElementById('servicioEstado').value = servicio.estado || 'pendiente';
     document.getElementById('servicioPrecio').value = servicio.precio || '';
+    document.getElementById('servicioTecnico').value = servicio.tecnico_asignado || '';
+    document.getElementById('servicioEntregadoPor').value = servicio.entregado_por || '';
+    
     const clientes = await window.DB.getClientes();
-    const select = document.getElementById('servicioCliente');
-    select.innerHTML = '<option value="">Seleccionar cliente</option>' + clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+    const selectCliente = document.getElementById('servicioCliente');
+    selectCliente.innerHTML = '<option value="">Seleccionar cliente</option>' + clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
     document.getElementById('servicioCliente').value = servicio.cliente_id || '';
+    
+    const usuarios = await obtenerUsuarios();
+    const selectTecnico = document.getElementById('servicioTecnico');
+    const selectEntregado = document.getElementById('servicioEntregadoPor');
+    const opciones = usuarios.map(u => `<option value="${u.nombre}">${u.nombre}</option>`).join('');
+    selectTecnico.innerHTML = `<option value="">Seleccionar técnico</option>${opciones}`;
+    selectEntregado.innerHTML = `<option value="">Seleccionar quien entrega</option>${opciones}`;
+    selectTecnico.value = servicio.tecnico_asignado || '';
+    selectEntregado.value = servicio.entregado_por || '';
+    
     document.getElementById('modalServicio').style.display = 'flex';
+  }
+};
+
+window.eliminarServicio = async (id) => {
+  if (confirm('¿Eliminar este servicio?')) {
+    await window.DB.deleteServicio(id);
+    await window.cargarServicios();
   }
 };
 
@@ -201,15 +274,24 @@ document.addEventListener('submit', async (e) => {
       cliente_nombre: cliente?.nombre,
       equipo: document.getElementById('servicioEquipo').value,
       problema: document.getElementById('servicioProblema').value,
-      diagnostico: document.getElementById('servicioDiagnostico').value,
+      diagnostico: document.getElementById('servicioDiagnostico').value || '',
       estado: document.getElementById('servicioEstado').value,
-      precio: parseFloat(document.getElementById('servicioPrecio').value) || 0
+      precio: parseFloat(document.getElementById('servicioPrecio').value) || 0,
+      tecnico_asignado: document.getElementById('servicioTecnico').value || '',
+      entregado_por: document.getElementById('servicioEntregadoPor').value || ''
     };
-    if (id) await window.DB.updateServicio(id, data);
-    else await window.DB.saveServicio(data);
+    if (id) {
+      await window.DB.updateServicio(id, data);
+    } else {
+      await window.DB.saveServicio(data);
+    }
     window.cerrarModalServicio();
     await window.cargarServicios();
   }
 });
 
-setTimeout(() => { if (document.getElementById('tablaServicios')) window.cargarServicios(); }, 100);
+setTimeout(() => {
+  if (document.getElementById('tablaServicios')) {
+    window.cargarServicios();
+  }
+}, 100);
