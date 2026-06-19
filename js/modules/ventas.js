@@ -323,8 +323,8 @@ window.finalizarVenta = async () => {
   const comentario = document.getElementById('comentarioVenta').value;
   
   const subtotal = carritoVentas.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-  const iva = subtotal * 0.16;
-  const total = subtotal + iva;
+  
+  
   
   const resumen = carritoVentas.map(item => 
     `${item.nombre} x${item.cantidad} = $${(item.precio * item.cantidad).toLocaleString()}`
