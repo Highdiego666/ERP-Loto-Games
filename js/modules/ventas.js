@@ -442,13 +442,98 @@ si la garantía sigue vigente.
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-          font-family: 'Courier New', monospace;
-          font-size: 15px;
+          body {
+            font-family: 'Courier New', 'Courier', monospace;
+            font-size: 16px;
+            font-weight: 900; /* Extra bold */
+            padding: 12px 10px;
+            width: 80mm;
+            margin: 0 auto;
+            background: #fff;
+            color: #000;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        .ticket {
+          text-align: center;
+        }
+        .ticket h2 {
+          font-size: 20px;
+          margin-bottom: 2px;
+          font-weight: 900;
+        }
+        .ticket .sub {
+          font-size: 13px;
+          color: #444;
+          margin-bottom: 10px;
           font-weight: bold;
-          padding: 15px;
-          width: 80mm;
-          margin: 0 auto;
-          background: #fff;
+        }
+        .ticket hr {
+          border: none;
+          border-top: 2px dashed #000;
+          margin: 6px 0;
+        }
+        .ticket .items {
+          text-align: left;
+          margin: 8px 0;
+        }
+        .ticket .items div {
+         font-weight: 900;
+         font-size: 15px;
+         padding: 2px 0;
+        }
+        .ticket .total {
+          font-size: 22px;
+          font-weight: 900;
+          margin: 10px 0;
+        }
+        .ticket .info-line {
+          display: flex;
+          justify-content: space-between;
+          font-size: 14px;
+          padding: 2px 0;
+          font-weight: 900;
+        }
+        .ticket .info-line span:last-child {
+          font-weight: 900;
+        }
+        .ticket .footer {
+          font-size: 12px;
+          color: #555;
+          margin-top: 15px;
+          border-top: 2px dashed #000;
+          padding-top: 10px;
+          font-weight: normal;
+        }
+        .ticket .no-devolucion {
+          font-size: 15px;
+          font-weight: 900;
+          color: #d32f2f;
+          margin: 6px 0;
+        }
+        .ticket .horario-garantia {
+          font-size: 13px;
+          color: #111;
+          margin: 6px 0;
+          font-weight: 900;
+        }
+        .ticket .terminos {
+          text-align: left;
+          font-size: 11px;
+          line-height: 1.4;
+          color: #111;
+          margin-top: 10px;
+          padding-top: 8px;
+          border-top: 2px dashed #000;
+          white-space: pre-wrap;
+          font-family: 'Courier New', monospace;
+          font-weight: normal;
+        } 
+        .ticket .terminos strong { font-weight: 900; }
+        @media print {
+          body { padding: 8px; }
+          .no-print { display: none; }
+        }
         }
         .ticket { text-align: center; }
         .ticket h2 {
