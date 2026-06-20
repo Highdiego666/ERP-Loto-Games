@@ -1,5 +1,3 @@
-cd ~/loto-games-pos/nuevo-frontend
-cat > js/modules/ventas.js << 'EOF'
 // ============================================
 // LOTO GAMES POS - MÓDULO DE VENTAS
 // CON USUARIO, DESCUENTO, Y TICKET COMPLETO
