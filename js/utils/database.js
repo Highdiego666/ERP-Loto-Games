@@ -6,7 +6,6 @@ const DB = {
     // ========== INICIALIZACIÓN ==========
     async init() {
         console.log('🗄️ Inicializando DB...');
-        // Verificar conexión con Supabase
         if (!window.supabase) {
             console.warn('⚠️ Supabase no disponible, usando localStorage');
         }
@@ -44,6 +43,7 @@ const DB = {
                     }])
                     .select();
                 if (error) throw error;
+                console.log('✅ Producto guardado en Supabase');
                 return data[0];
             }
         } catch (e) { console.warn('Supabase error, guardando local', e); }
@@ -69,6 +69,7 @@ const DB = {
                     })
                     .eq('id', id);
                 if (error) throw error;
+                console.log('✅ Producto actualizado');
                 return true;
             }
         } catch (e) { console.warn('Supabase error, actualizando local', e); }
@@ -90,6 +91,7 @@ const DB = {
                     .delete()
                     .eq('id', id);
                 if (error) throw error;
+                console.log('✅ Producto eliminado');
                 return true;
             }
         } catch (e) { console.warn('Supabase error, eliminando local', e); }
@@ -107,14 +109,16 @@ const DB = {
                     .from('ventas')
                     .insert([{
                         items: venta.items,
-                        subtotal: venta.subtotal,
                         total: venta.total,
                         metodo_pago: venta.metodoPago,
                         comentario: venta.comentario || '',
+                        descuento_aplicado: venta.descuentoAplicado || false,
+                        usuario: venta.usuario || 'Admin',
                         fecha: new Date().toISOString()
                     }])
                     .select();
                 if (error) throw error;
+                
                 // Actualizar stock de productos
                 if (venta.items) {
                     for (const item of venta.items) {
@@ -130,6 +134,7 @@ const DB = {
                         }
                     }
                 }
+                console.log('✅ Venta registrada en Supabase');
                 return data[0];
             }
         } catch (e) { console.warn('Supabase error, guardando venta local', e); }
@@ -318,7 +323,7 @@ const DB = {
         return true;
     },
 
-    // ========== SERVICIOS TÉCNICOS ==========
+    // ========== SERVICIOS TÉCNICOS (ACTUALIZADO) ==========
     async getServicios() {
         try {
             if (window.supabase) {
@@ -347,6 +352,8 @@ const DB = {
                         estado: servicio.estado || 'pendiente',
                         precio: parseFloat(servicio.precio) || 0,
                         garantia_dias: servicio.garantia_dias || 30,
+                        tecnico_asignado: servicio.tecnico_asignado || '',
+                        entregado_por: servicio.entregado_por || '',
                         created_at: new Date().toISOString()
                     }])
                     .select();
@@ -376,10 +383,13 @@ const DB = {
                         diagnostico: data.diagnostico,
                         estado: data.estado,
                         precio: parseFloat(data.precio) || 0,
-                        garantia_dias: data.garantia_dias || 30
+                        garantia_dias: data.garantia_dias || 30,
+                        tecnico_asignado: data.tecnico_asignado || '',
+                        entregado_por: data.entregado_por || ''
                     })
                     .eq('id', id);
                 if (error) throw error;
+                console.log('✅ Servicio actualizado');
                 return true;
             }
         } catch (e) { console.warn('Supabase error, actualizando local', e); }
@@ -401,6 +411,7 @@ const DB = {
                     .delete()
                     .eq('id', id);
                 if (error) throw error;
+                console.log('✅ Servicio eliminado');
                 return true;
             }
         } catch (e) { console.warn('Supabase error, eliminando local', e); }
@@ -414,20 +425,43 @@ const DB = {
     async getStats() {
         const productos = await this.getProductos();
         const ventas = await this.getVentas();
+        const servicios = await this.getServicios();
+        const clientes = await this.getClientes();
+        
         const hoy = new Date();
         hoy.setHours(0,0,0,0);
         const ventasHoy = ventas.filter(v => new Date(v.fecha) >= hoy);
         const totalVentasHoy = ventasHoy.reduce((s,v) => s + (v.total||0), 0);
+        
         return {
             totalProductos: productos.length,
             stockBajo: productos.filter(p => p.stock < 5).length,
             ventasHoy: ventasHoy.length,
-            totalVentasHoy: totalVentasHoy
+            totalVentasHoy: totalVentasHoy,
+            serviciosPendientes: servicios.filter(s => s.estado === 'pendiente').length,
+            clientesTotales: clientes.length
         };
+    },
+
+    // ========== SEGURIDAD ==========
+    async resetDatabase() {
+        if (!confirm('⚠️ ¿Estás seguro? Esto eliminará TODOS los datos locales y de Supabase.')) return;
+        try {
+            if (window.supabase) {
+                // Opcional: eliminar datos de Supabase
+                // await window.supabase.from('productos').delete().neq('id', 0);
+            }
+        } catch(e) {}
+        localStorage.clear();
+        alert('Datos eliminados');
+        location.reload();
     }
 };
 
-// Inicializar
+// ============================================
+// INICIALIZAR
+// ============================================
+
 DB.init();
 window.DB = DB;
 console.log("✅ DB module loaded");
