@@ -601,4 +601,3 @@ setTimeout(() => {
     window.cargarProductosVenta();
   }
 }, 100);
-EOF
