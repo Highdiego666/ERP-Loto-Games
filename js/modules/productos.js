@@ -2,7 +2,6 @@
 // LOTO GAMES POS - MÓDULO DE PRODUCTOS
 // ============================================
 
-// Variables globales
 let productosData = [];
 
 window.productosModule = () => `
@@ -95,16 +94,14 @@ window.productosModule = () => `
 `;
 
 // ============================================
-// FUNCIONES EXISTENTES
+// FUNCIONES PRINCIPALES
 // ============================================
 
-// Cargar productos desde Supabase
 window.cargarProductos = async () => {
   productosData = await window.DB.getProductos();
   window.renderizarTablaProductos(productosData);
 };
 
-// Renderizar tabla CON el botón de imprimir
 window.renderizarTablaProductos = (productos) => {
   const tbody = document.getElementById('tablaProductos');
   if (!tbody) return;
@@ -137,7 +134,6 @@ window.renderizarTablaProductos = (productos) => {
   `).join('');
 };
 
-// Filtrar productos
 window.filtrarProductos = () => {
   const busqueda = document.getElementById('buscarProductoInput').value.toLowerCase();
   const categoria = document.getElementById('filtroCategoria').value;
@@ -159,7 +155,6 @@ window.filtrarProductos = () => {
   window.renderizarTablaProductos(filtrados);
 };
 
-// Mostrar modal
 window.mostrarModalProducto = () => {
   document.getElementById('modalProductoTitulo').innerText = 'Nuevo Producto';
   document.getElementById('productoId').value = '';
@@ -167,12 +162,10 @@ window.mostrarModalProducto = () => {
   document.getElementById('modalProducto').style.display = 'flex';
 };
 
-// Cerrar modal
 window.cerrarModalProducto = () => {
   document.getElementById('modalProducto').style.display = 'none';
 };
 
-// Editar producto
 window.editarProducto = (id) => {
   const producto = productosData.find(p => p.id == id);
   if (producto) {
@@ -187,7 +180,6 @@ window.editarProducto = (id) => {
   }
 };
 
-// Eliminar producto
 window.eliminarProducto = async (id) => {
   if (confirm('¿Eliminar este producto?')) {
     await window.DB.deleteProducto(id);
@@ -198,119 +190,109 @@ window.eliminarProducto = async (id) => {
 };
 
 // ============================================
-// NUEVA FUNCIÓN: IMPRIMIR ETIQUETA
+// FUNCIÓN DE IMPRESIÓN DE ETIQUETA MEJORADA
 // ============================================
 
 window.imprimirEtiqueta = function(id) {
-    // Buscar el producto en los datos cargados
     const producto = productosData.find(p => p.id === id);
     if (!producto) {
         alert("❌ Producto no encontrado");
         return;
     }
 
-    // Usar el SKU como código de barras
-    const codigoBarras = producto.sku || producto.id.toString();
-
-    // Crear ventana de impresión
-    const win = window.open("", "_blank", "width=400,height=600");
+    // Abrir ventana sin barras de navegación
+    const win = window.open("", "_blank", "width=400,height=300,menubar=no,toolbar=no,location=no,status=no,scrollbars=no");
     if (!win) {
         alert("⚠️ Permite ventanas emergentes para imprimir etiquetas");
         return;
     }
+
+    const codigoBarras = producto.sku || producto.id.toString();
 
     win.document.write(`
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset="UTF-8">
-            <title>Etiqueta - ${producto.nombre}</title>
+            <title>Etiqueta</title>
             <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
             <style>
-                * { margin: 0; padding: 0; box-sizing: border-box; }
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
                 body {
                     display: flex;
                     justify-content: center;
                     align-items: center;
-                    min-height: 100vh;
-                    background: #f5f5f5;
+                    width: 80mm;
+                    height: 50mm;
+                    margin: 0 auto;
+                    background: #ffffff;
                     font-family: 'Arial', sans-serif;
+                    overflow: hidden;
                 }
                 .etiqueta {
-                    background: white;
-                    padding: 25px 30px;
-                    border-radius: 10px;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
                     text-align: center;
-                    width: 350px;
-                    border: 1px solid #ddd;
-                }
-                .logo {
-                    font-size: 14px;
-                    font-weight: bold;
-                    color: #4f46e5;
-                    letter-spacing: 2px;
-                    margin-bottom: 8px;
+                    width: 100%;
+                    height: 100%;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    align-items: center;
+                    padding: 3mm;
                 }
                 .producto-nombre {
-                    font-size: 18px;
+                    font-size: 16pt;
                     font-weight: bold;
-                    margin: 8px 0 4px 0;
-                    color: #1e293b;
+                    margin-bottom: 2mm;
+                    line-height: 1.2;
                 }
                 .producto-sku {
-                    font-size: 13px;
-                    color: #64748b;
-                    margin-bottom: 12px;
-                }
-                .producto-precio {
-                    font-size: 20px;
-                    font-weight: bold;
-                    color: #10b981;
-                    margin-bottom: 12px;
+                    font-size: 12pt;
+                    color: #333;
+                    margin-bottom: 2mm;
                 }
                 #barcode {
-                    margin: 10px auto;
-                    max-width: 100%;
-                }
-                .footer {
-                    margin-top: 12px;
-                    font-size: 11px;
-                    color: #94a3b8;
-                    border-top: 1px dashed #e2e8f0;
-                    padding-top: 10px;
+                    width: 100%;
+                    max-width: 70mm;
+                    height: auto;
                 }
                 @media print {
-                    body { background: white; }
-                    .etiqueta { box-shadow: none; border: 1px solid #ccc; }
+                    body {
+                        margin: 0;
+                        padding: 0;
+                        width: 80mm;
+                        height: 50mm;
+                    }
+                    .etiqueta {
+                        padding: 2mm;
+                    }
                 }
             </style>
         </head>
         <body>
             <div class="etiqueta">
-                <div class="logo">🏪 LOTO GAMES</div>
                 <div class="producto-nombre">${producto.nombre}</div>
                 <div class="producto-sku">SKU: ${producto.sku}</div>
-                <div class="producto-precio">$${parseFloat(producto.precio).toLocaleString()}</div>
                 <svg id="barcode"></svg>
-                <div class="footer">
-                    ${producto.categoria || 'Producto'} • ${producto.tipo || 'General'}
-                </div>
             </div>
             <script>
                 JsBarcode("#barcode", "${codigoBarras}", {
                     format: "CODE128",
-                    width: 2,
-                    height: 80,
+                    width: 1.8,
+                    height: 60,
                     displayValue: true,
-                    fontSize: 16,
-                    textMargin: 5,
+                    fontSize: 14,
+                    textMargin: 4,
                     background: "#ffffff",
-                    lineColor: "#000000"
+                    lineColor: "#000000",
+                    margin: 0
                 });
                 setTimeout(function() {
                     window.print();
-                }, 800);
+                }, 500);
             <\/script>
         </body>
         </html>
@@ -319,7 +301,7 @@ window.imprimirEtiqueta = function(id) {
 };
 
 // ============================================
-// GUARDAR PRODUCTO (sin cambios)
+// GUARDAR PRODUCTO
 // ============================================
 
 document.addEventListener('submit', async (e) => {
@@ -337,7 +319,7 @@ document.addEventListener('submit', async (e) => {
       alert('✅ Producto actualizado');
     } else {
       const sku = `LOT-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-      const codigoBarras = sku; // Usar SKU como código de barras
+      const codigoBarras = sku;
       await window.DB.saveProducto({ nombre, categoria, tipo, precio, stock, sku, codigoBarras });
       alert('✅ Producto creado');
     }
