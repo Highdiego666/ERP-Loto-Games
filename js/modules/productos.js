@@ -2,6 +2,7 @@
 // LOTO GAMES POS - MÓDULO DE PRODUCTOS
 // ============================================
 
+// Variables globales
 let productosData = [];
 
 window.productosModule = () => `
@@ -190,7 +191,7 @@ window.eliminarProducto = async (id) => {
 };
 
 // ============================================
-// FUNCIÓN DE IMPRESIÓN DE ETIQUETA MEJORADA
+// NUEVA FUNCIÓN: IMPRIMIR ETIQUETA 80x50mm
 // ============================================
 
 window.imprimirEtiqueta = function(id) {
@@ -200,8 +201,8 @@ window.imprimirEtiqueta = function(id) {
         return;
     }
 
-    // Abrir ventana sin barras de navegación
-    const win = window.open("", "_blank", "width=400,height=300,menubar=no,toolbar=no,location=no,status=no,scrollbars=no");
+    // Abrir ventana emergente sin barras
+    const win = window.open("", "_blank", "width=400,height=300,menubar=no,toolbar=no,location=no,status=no,scrollbars=no,resizable=no");
     if (!win) {
         alert("⚠️ Permite ventanas emergentes para imprimir etiquetas");
         return;
@@ -214,14 +215,11 @@ window.imprimirEtiqueta = function(id) {
         <html>
         <head>
             <meta charset="UTF-8">
-            <title>Etiqueta</title>
+            <title>Local14</title>
             <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
             <style>
-                * {
-                    margin: 0;
-                    padding: 0;
-                    box-sizing: border-box;
-                }
+                /* Eliminar márgenes y encabezados/pies de página */
+                * { margin: 0; padding: 0; box-sizing: border-box; }
                 body {
                     display: flex;
                     justify-content: center;
@@ -259,16 +257,15 @@ window.imprimirEtiqueta = function(id) {
                     max-width: 70mm;
                     height: auto;
                 }
+                /* Configuración de página para impresión */
+                @page {
+                    size: 80mm 50mm;
+                    margin: 0;
+                }
                 @media print {
-                    body {
-                        margin: 0;
-                        padding: 0;
-                        width: 80mm;
-                        height: 50mm;
-                    }
-                    .etiqueta {
-                        padding: 2mm;
-                    }
+                    body { margin: 0; padding: 0; width: 80mm; height: 50mm; }
+                    .etiqueta { padding: 2mm; }
+                    .no-print { display: none; }
                 }
             </style>
         </head>
@@ -290,6 +287,7 @@ window.imprimirEtiqueta = function(id) {
                     lineColor: "#000000",
                     margin: 0
                 });
+                // Imprimir después de 0.5 segundos
                 setTimeout(function() {
                     window.print();
                 }, 500);
@@ -340,4 +338,4 @@ setTimeout(() => {
   }
 }, 100);
 
-console.log("✅ Módulo de productos cargado con impresión de etiquetas");
+console.log("✅ Módulo de productos cargado con impresión de etiquetas 80x50mm");
