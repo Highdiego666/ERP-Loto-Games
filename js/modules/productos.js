@@ -224,8 +224,8 @@ window.imprimirEtiqueta = function(id) {
                     display: flex;
                     justify-content: center;
                     align-items: center;
-                    width: 80mm;
-                    height: 50mm;
+                    width: 40mm;
+                    height: 30mm;
                     margin: 0 auto;
                     background: #ffffff;
                     font-family: 'Arial', sans-serif;
