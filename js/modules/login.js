@@ -2,7 +2,7 @@
 // LOTO GAMES POS - LOGIN CON PIN (VERSIÓN FINAL)
 // ============================================
 
-// Usuarios predefinidos (fallback si Supabase falla)
+// Usuarios predefinidos (SOLO ESTOS FUNCIONAN)
 const usuariosPredefinidos = [
   { id: 1, nombre: "Administrador", pin: "1234", rol: "admin", email: "admin@lotogames.com", privilegios: [] },
   { id: 2, nombre: "Soporte Técnico", pin: "1111", rol: "soporte", email: "soporte@lotogames.com", privilegios: [] },
@@ -10,19 +10,17 @@ const usuariosPredefinidos = [
   { id: 4, nombre: "Técnico", pin: "3333", rol: "tecnico", email: "tecnico@lotogames.com", privilegios: [] }
 ];
 
+// Forzar uso de predefinidos (sin conectar a Supabase)
 async function obtenerUsuarios() {
-  try {
-    if (window.DB && typeof window.DB.getUsuarios === 'function') {
-      const usuarios = await window.DB.getUsuarios();
-      if (usuarios && usuarios.length > 0) return usuarios;
-    }
-  } catch (e) {}
   return usuariosPredefinidos;
 }
 
 window.verificarPIN = async (pin) => {
+  console.log("Verificando PIN:", pin);
   const usuarios = await obtenerUsuarios();
+  console.log("Usuarios disponibles:", usuarios);
   const usuario = usuarios.find(u => u.pin === pin);
+  console.log("Usuario encontrado:", usuario);
   if (usuario) {
     localStorage.setItem('loto_session', JSON.stringify({
       id: usuario.id,
@@ -160,4 +158,4 @@ window.inicializarTecladoPIN = () => {
   console.log("✅ Teclado inicializado");
 };
 
-console.log("✅ Login module loaded");
+console.log("✅ Login module loaded (predefinidos forzados)");
