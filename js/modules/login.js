@@ -1,8 +1,13 @@
-const usuariosPIN = [
-  { id: 1, nombre: "Administrador", pin: "1234", rol: "admin", email: "admin@lotogames.com" },
-  { id: 2, nombre: "Soporte Técnico", pin: "1111", rol: "soporte", email: "soporte@lotogames.com" },
-  { id: 3, nombre: "Vendedor", pin: "2222", rol: "vendedor", email: "vendedor@lotogames.com" },
-  { id: 4, nombre: "Técnico", pin: "3333", rol: "tecnico", email: "tecnico@lotogames.com" }
+// ============================================
+// LOTO GAMES POS - LOGIN CON PIN Y PRIVILEGIOS
+// ============================================
+
+// Usuarios predefinidos (se usan si Supabase falla)
+const usuariosPredefinidos = [
+  { id: 1, nombre: "Administrador", pin: "1234", rol: "admin", email: "admin@lotogames.com", privilegios: [] },
+  { id: 2, nombre: "Soporte Técnico", pin: "1111", rol: "soporte", email: "soporte@lotogames.com", privilegios: [] },
+  { id: 3, nombre: "Vendedor", pin: "2222", rol: "vendedor", email: "vendedor@lotogames.com", privilegios: [] },
+  { id: 4, nombre: "Técnico", pin: "3333", rol: "tecnico", email: "tecnico@lotogames.com", privilegios: [] }
 ];
 
 window.loginModule = () => {
@@ -48,12 +53,36 @@ window.loginModule = () => {
 
 let pinIngresado = "";
 
-window.verificarPIN = (pin) => {
-  const usuario = usuariosPIN.find(u => u.pin === pin);
+// Función para obtener usuarios (desde Supabase o predefinidos)
+async function obtenerUsuarios() {
+  try {
+    if (window.DB && window.DB.getUsuarios) {
+      const usuarios = await window.DB.getUsuarios();
+      if (usuarios && usuarios.length > 0) {
+        return usuarios;
+      }
+    }
+  } catch (e) {
+    console.warn("Usando usuarios predefinidos (falló Supabase)");
+  }
+  return usuariosPredefinidos;
+}
+
+// Verificar PIN
+window.verificarPIN = async (pin) => {
+  const usuarios = await obtenerUsuarios();
+  const usuario = usuarios.find(u => u.pin === pin);
   if (usuario) {
+    // Guardar sesión con privilegios
     localStorage.setItem('loto_session', JSON.stringify({
-      id: usuario.id, nombre: usuario.nombre, rol: usuario.rol, email: usuario.email,
-      loggedIn: true, timestamp: Date.now()
+      id: usuario.id,
+      nombre: usuario.nombre,
+      rol: usuario.rol,
+      email: usuario.email,
+      pin: usuario.pin,
+      privilegios: usuario.privilegios || [],
+      loggedIn: true,
+      timestamp: Date.now()
     }));
     return { success: true, usuario };
   }
@@ -70,7 +99,9 @@ window.verificarSesion = () => {
   const session = localStorage.getItem('loto_session');
   if (session) {
     const data = JSON.parse(session);
-    if (data.loggedIn && (Date.now() - data.timestamp) < 28800000) return data;
+    if (data.loggedIn && (Date.now() - data.timestamp) < 28800000) { // 8 horas
+      return data;
+    }
   }
   return null;
 };
@@ -102,15 +133,17 @@ window.inicializarTecladoPIN = () => {
       } 
       else if (num === 'enter') {
         if (pinIngresado.length === 4) {
-          const result = window.verificarPIN(pinIngresado);
-          if (result.success) {
-            window.usuarioActual = result.usuario;
-            if (window.cargarSistemaLogin) window.cargarSistemaLogin(result.usuario);
-          } else {
-            if (errorDiv) errorDiv.style.display = "block";
-            pinIngresado = "";
-            if (pinDisplay) pinDisplay.innerHTML = "••••";
-          }
+          window.verificarPIN(pinIngresado).then(result => {
+            if (result.success) {
+              window.usuarioActual = result.usuario;
+              if (window.cargarSistemaLogin) window.cargarSistemaLogin(result.usuario);
+            } else {
+              if (errorDiv) errorDiv.style.display = "block";
+              pinIngresado = "";
+              if (pinDisplay) pinDisplay.innerHTML = "••••";
+              if (messageDiv) messageDiv.innerHTML = "PIN incorrecto";
+            }
+          });
         } else if (messageDiv) {
           messageDiv.innerHTML = "Ingrese 4 dígitos";
           messageDiv.style.color = "#f59e0b";
