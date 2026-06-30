@@ -1,62 +1,38 @@
 // ============================================
-// LOTO GAMES POS - LOGIN CON PIN (VERSIÓN DB)
+// LOTO GAMES POS - LOGIN CON PIN (VERSIÓN DEFINITIVA)
 // ============================================
 
-console.log("🚀 Cargando login2.js con integración a DB...");
-
-// Usuarios predefinidos (fallback si la DB falla)
-const usuariosPredefinidos = [
-  { id: 1, nombre: "Diego Perez", pin: "1620", rol: "admin", email: "admin@lotogames.com", privilegios: [] },
-  { id: 2, nombre: "Soporte Técnico", pin: "1111", rol: "soporte", email: "soporte@lotogames.com", privilegios: [] },
-  { id: 3, nombre: "Alejandra", pin: "2222", rol: "vendedor", email: "vendedor@lotogames.com", privilegios: [] },
-  { id: 4, nombre: "Charlie", pin: "2025", rol: "tecnico", email: "tecnico@lotogames.com", privilegios: [] }
-];
+console.log("🚀 Cargando login2.js con usuarios incrustados...");
 
 window.verificarPIN = async (pin) => {
   console.log("🔍 Verificando PIN:", pin);
   
-  let usuarios = [];
-  try {
-    // Intentar obtener usuarios desde Supabase/localStorage
-    if (window.DB && typeof window.DB.getUsuarios === 'function') {
-      const dbUsuarios = await window.DB.getUsuarios();
-      if (dbUsuarios && dbUsuarios.length > 0) {
-        usuarios = dbUsuarios;
-        console.log("✅ Usuarios cargados desde DB:", usuarios.length);
-      }
-    }
-  } catch (e) {
-    console.warn("⚠️ Error al obtener usuarios de DB, usando predefinidos:", e);
-  }
+  // Usuarios incrustados directamente en la función
+  const usuarios = [
+    { id: 1, nombre: "Diego Perez", pin: "1620", rol: "admin", email: "admin@lotogames.com", privilegios: [] },
+    { id: 2, nombre: "Soporte Técnico", pin: "1111", rol: "soporte", email: "soporte@lotogames.com", privilegios: [] },
+    { id: 3, nombre: "Vendedor", pin: "2222", rol: "vendedor", email: "vendedor@lotogames.com", privilegios: [] },
+    { id: 4, nombre: "Técnico", pin: "3333", rol: "tecnico", email: "tecnico@lotogames.com", privilegios: [] }
+  ];
   
-  // Si no hay usuarios en DB, usar los predefinidos
-  if (usuarios.length === 0) {
-    usuarios = usuariosPredefinidos;
-    console.log("📋 Usando usuarios predefinidos");
-  }
+  console.log("👥 Usuarios disponibles:", usuarios);
   
-  // Buscar usuario por PIN (campo 'pin')
-  const usuario = usuarios.find(u => u.pin && u.pin === pin);
-  console.log("👤 Usuario encontrado:", usuario);
+  const usuario = usuarios.find(u => u.pin === pin);
+  console.log("✅ Usuario encontrado:", usuario);
   
   if (usuario) {
-    // Guardar sesión con todos los datos del usuario
-    const sessionData = {
+    localStorage.setItem('loto_session', JSON.stringify({
       id: usuario.id,
-      nombre: usuario.nombre || usuario.email || 'Usuario',
-      rol: usuario.rol || 'vendedor',
+      nombre: usuario.nombre,
+      rol: usuario.rol,
       email: usuario.email,
       pin: usuario.pin,
       privilegios: usuario.privilegios || [],
       loggedIn: true,
       timestamp: Date.now()
-    };
-    localStorage.setItem('loto_session', JSON.stringify(sessionData));
-    console.log("✅ Sesión guardada:", sessionData);
+    }));
     return { success: true, usuario };
   }
-  
-  console.warn("❌ PIN incorrecto o usuario sin PIN");
   return { success: false };
 };
 
@@ -72,9 +48,7 @@ window.verificarSesion = () => {
   const session = localStorage.getItem('loto_session');
   if (session) {
     const data = JSON.parse(session);
-    if (data.loggedIn && (Date.now() - data.timestamp) < 28800000) {
-      return data;
-    }
+    if (data.loggedIn && (Date.now() - data.timestamp) < 28800000) return data;
   }
   return null;
 };
@@ -183,4 +157,4 @@ window.inicializarTecladoPIN = () => {
   console.log("✅ Teclado inicializado");
 };
 
-console.log("✅ Login2 module loaded (con integración a DB)");
+console.log("✅ Login2 module loaded (con usuarios incrustados en verificarPIN)");
