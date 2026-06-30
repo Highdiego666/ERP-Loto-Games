@@ -1,23 +1,20 @@
 // ============================================
-// LOTO GAMES POS - MÓDULO DE VENTAS
-// CON USUARIO, DESCUENTO, TICKET CON LOGO
+// LOTO GAMES POS - MÓDULO DE VENTAS (TICKET 80mm)
 // ============================================
 
 let carritoVentas = [];
 let descuentoActivo = false;
 
 // ============================================
-// CONFIGURACIÓN DEL LOGO
+// CONFIGURACIÓN DEL LOGO (opcional)
 // ============================================
-// Opción 1: Usar imagen en base64 (recomendado para GitHub Pages)
-// Ve a https://www.base64-image.de/ , sube tu logo, copia el código
-// y pégalo entre las comillas de LOGO_BASE64.
-const LOGO_BASE64 = ''; // Deja vacío para usar el texto por defecto.
+// Opción 1: Imagen en Base64 (deja vacío para texto)
+const LOGO_BASE64 = '';
+// Opción 2: URL de imagen (ej. "assets/img/logo.png")
+const LOGO_URL = '';
 
-// Opción 2: Usar URL de una imagen alojada en tu repositorio
-// Ejemplo: "assets/img/logo.png"
-const LOGO_URL = ''; // Deja vacío para usar el texto por defecto.
-
+// ============================================
+// MÓDULO PRINCIPAL
 // ============================================
 
 window.ventasModule = () => {
@@ -344,7 +341,7 @@ window.limpiarCarrito = () => {
 };
 
 // ============================================
-// IMPRESIÓN DE TICKET CON LOGO
+// IMPRESIÓN DE TICKET 80mm (AJUSTADO)
 // ============================================
 
 window.imprimirTicket = (ventaData) => {
@@ -368,69 +365,51 @@ window.imprimirTicket = (ventaData) => {
     const precio = (item.precioBase || item.precio || 0) * 1.05;
     const subtotal = precio * item.cantidad;
     return `
-      <div style="display: flex; justify-content: space-between; font-size: 13px; padding: 2px 0;">
-        <span style="font-weight: bold;">${item.nombre} x${item.cantidad}</span>
-        <span style="font-weight: bold;">$${subtotal.toFixed(2)}</span>
+      <div style="display: flex; justify-content: space-between; padding: 2px 0;">
+        <span style="font-weight: bold;">${item.nombre}</span>
+        <span style="font-weight: bold;">${item.cantidad} x $${precio.toFixed(2)}</span>
+        <span style="font-weight: bold; color: #10b981;">$${subtotal.toFixed(2)}</span>
       </div>
     `;
   }).join('');
 
-  // ============================================
-  // GENERAR LOGO
-  // ============================================
   let logoHtml = '';
   if (LOGO_BASE64) {
-    logoHtml = `<img src="${LOGO_BASE64}" alt="Logo" style="max-width: 150px; height: auto; margin-bottom: 8px;">`;
+    logoHtml = `<img src="${LOGO_BASE64}" alt="Logo" style="max-width: 140px; height: auto; margin-bottom: 6px;">`;
   } else if (LOGO_URL) {
-    logoHtml = `<img src="${LOGO_URL}" alt="Logo" style="max-width: 150px; height: auto; margin-bottom: 8px;">`;
+    logoHtml = `<img src="${LOGO_URL}" alt="Logo" style="max-width: 140px; height: auto; margin-bottom: 6px;">`;
   } else {
-    logoHtml = `<h2 style="font-size: 20px; margin-bottom: 2px; font-weight: bold;">🏪 LOTO GAMES</h2>
-                <div style="font-size: 13px; color: #555; margin-bottom: 10px;">Sistema POS</div>`;
+    logoHtml = `<h2 style="font-size: 20px; margin-bottom: 2px; font-weight: bold; letter-spacing: 1px;">🏪 LOTO GAMES</h2>
+                <div style="font-size: 13px; color: #555; margin-bottom: 8px; font-weight: normal;">Sistema POS</div>`;
   }
 
   const terminosGarantia = `
 TÉRMINOS DE GARANTÍA
-         LOTO GAMES REPAIR
-═══════════════════════════════════════
-
+LOTO GAMES REPAIR
+─────────────────────────
 🔧 GARANTÍA POR REPARACIÓN: 30 DÍAS
+La garantía cubre ÚNICAMENTE la falla específica reportada y reparada.
 
-La garantía cubre ÚNICAMENTE la falla específica 
-reportada y reparada en este servicio.
-
-❌ LA GARANTÍA SE ANULA AUTOMÁTICAMENTE SI:
-
-1. El equipo es abierto, manipulado o reparado 
-   por personal ajeno a LOTO GAMES.
-
-2. Se presentan daños por líquidos, golpes, 
-   caídas o mal uso del equipo.
-
-3. Se instala software, firmware o modificaciones 
-   no autorizadas.
-
-4. La etiqueta de seguridad se encuentra rota, 
-   removida o alterada.
-
-5. El daño original es diferente al reportado 
-   en este ticket.
+❌ LA GARANTÍA SE ANULA SI:
+1. El equipo es abierto, manipulado o reparado por personal ajeno.
+2. Daños por líquidos, golpes, caídas o mal uso.
+3. Software/firmware no autorizado instalado.
+4. Etiqueta de seguridad rota o alterada.
+5. El daño original es diferente al reportado.
 
 ⚠️ IMPORTANTE:
-- Guarda este ticket como comprobante de garantía.
-- La garantía es personal e intransferible.
+- Guarda este ticket como comprobante.
+- Garantía personal e intransferible.
 - Aplica solo en nuestra tienda física.
-- No cubre piezas estéticas (carcasas, botones, 
-  o cosméticos).
+- No cubre piezas estéticas.
 
-✅ MANTENEMOS DERECHO DE REVISIÓN:
-Ante cualquier anomalía, el equipo será revisado 
-por nuestro departamento técnico para determinar 
-si la garantía sigue vigente.
+✅ DERECHO DE REVISIÓN:
+Ante cualquier anomalía, el equipo será revisado por nuestro departamento técnico.
 
-═══════════════════════════════════════
-   ¡Gracias por confiar en LOTO GAMES!
-   ¿Preguntas? 📞 (tu teléfono aquí)
-═══════════════════════════════════════
+─────────────────────────
+¡Gracias por confiar en LOTO GAMES!
+📞 (tu teléfono aquí)
+─────────────────────────
   `;
 
   win.document.write(`
@@ -443,83 +422,69 @@ si la garantía sigue vigente.
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
           font-family: 'Arial', 'Helvetica', sans-serif;
-          font-size: 15px;
+          font-size: 14px;
           font-weight: bold;
-          padding: 12px;
+          padding: 10px;
           width: 80mm;
           margin: 0 auto;
           background: #fff;
-          line-height: 1.5;
+          line-height: 1.4;
         }
         .ticket { text-align: center; }
-        .ticket h2 {
-          font-size: 20px;
-          margin-bottom: 2px;
-          font-weight: bold;
-          letter-spacing: 1px;
-        }
-        .ticket .sub {
-          font-size: 13px;
-          color: #555;
-          margin-bottom: 10px;
-          font-weight: normal;
-        }
-        .ticket hr {
-          border: none;
-          border-top: 1px dashed #aaa;
-          margin: 8px 0;
-        }
-        .ticket .items {
-          text-align: left;
-          margin: 10px 0;
-        }
+        .ticket .logo { margin-bottom: 6px; }
+        .ticket hr { border: none; border-top: 1px dashed #aaa; margin: 6px 0; }
+        .ticket .items { text-align: left; margin: 6px 0; }
         .ticket .items div {
+          display: flex;
+          justify-content: space-between;
+          padding: 2px 0;
+          font-size: 14px;
           font-weight: bold;
-          font-size: 15px;
-          padding: 4px 0;
+          border-bottom: 1px dotted #ddd;
         }
-        .ticket .total {
-          font-size: 22px;
-          font-weight: bold;
-          margin: 10px 0;
-        }
+        .ticket .items div:last-child { border-bottom: none; }
         .ticket .info-line {
           display: flex;
           justify-content: space-between;
-          font-size: 14px;
-          padding: 4px 0;
+          font-size: 13px;
+          padding: 2px 0;
           font-weight: bold;
         }
-        .ticket .info-line span:last-child {
+        .ticket .total {
+          font-size: 20px;
           font-weight: bold;
+          margin: 6px 0;
+          padding: 6px 0;
+          border-top: 2px solid #000;
+          border-bottom: 2px solid #000;
         }
         .ticket .footer {
-          font-size: 12px;
+          font-size: 11px;
           color: #555;
-          margin-top: 15px;
+          margin-top: 10px;
           border-top: 1px dashed #aaa;
-          padding-top: 10px;
+          padding-top: 8px;
           font-weight: normal;
         }
         .ticket .no-devolucion {
-          font-size: 15px;
+          font-size: 14px;
           font-weight: bold;
           color: #d32f2f;
-          margin: 6px 0;
+          margin: 4px 0;
         }
         .ticket .horario-garantia {
           font-size: 13px;
           color: #222;
-          margin: 6px 0;
+          margin: 4px 0;
           font-weight: bold;
         }
         .ticket .terminos {
           text-align: left;
-          font-size: 11px;
-          line-height: 1.4;
+          font-size: 10.5px;
+          line-height: 1.3;
           color: #222;
-          margin-top: 10px;
-          padding-top: 8px;
+          margin-top: 8px;
+          padding-top: 6px;
           border-top: 1px dashed #aaa;
           white-space: pre-wrap;
           font-family: 'Arial', sans-serif;
@@ -527,14 +492,14 @@ si la garantía sigue vigente.
         }
         .ticket .terminos strong { font-weight: bold; }
         @media print {
-          body { padding: 8px; }
+          body { padding: 6px; }
           .no-print { display: none; }
         }
       </style>
     </head>
     <body>
       <div class="ticket">
-        ${logoHtml}
+        <div class="logo">${logoHtml}</div>
         <hr>
         <div class="info-line"><span>Fecha:</span><span>${fecha}</span></div>
         <div class="info-line"><span>Vendedor:</span><span>${usuario}</span></div>
@@ -543,12 +508,12 @@ si la garantía sigue vigente.
         <div class="items">${itemsHtml}</div>
         <hr>
         <div class="info-line"><span>Método de pago:</span><span>${metodo}</span></div>
-        <div class="info-line total"><span>Total:</span><span>$${total.toFixed(2)}</span></div>
-        ${comentario ? `<div style="font-size:12px; margin-top:5px; color:#555; font-weight:normal;">📝 ${comentario}</div>` : ''}
+        <div class="total">TOTAL: $${total.toFixed(2)}</div>
+        ${comentario ? `<div style="font-size:11px; margin-top:4px; color:#555; font-weight:normal;">📝 ${comentario}</div>` : ''}
         <hr>
         <div class="no-devolucion">❌ No Hay devoluciones de Efectivo</div>
         <div class="horario-garantia">🕐 Garantías: Lun-Vie 11:00 a 17:00</div>
-        <div class="horario-garantia" style="font-size:12px; color:#888; font-weight:normal;">Sábado y Domingo no atendemos garantías</div>
+        <div class="horario-garantia" style="font-size:11px; color:#888; font-weight:normal;">Sábado y Domingo no atendemos garantías</div>
         <hr>
         <div class="terminos">${terminosGarantia}</div>
         <hr>
@@ -558,9 +523,7 @@ si la garantía sigue vigente.
         </div>
       </div>
       <script>
-        setTimeout(function() {
-          window.print();
-        }, 500);
+        setTimeout(function() { window.print(); }, 500);
       <\/script>
     </body>
     </html>
