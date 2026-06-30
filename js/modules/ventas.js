@@ -347,7 +347,7 @@ window.limpiarCarrito = () => {
 window.imprimirTicket = (ventaData) => {
   if (!ventaData) return;
 
-  const win = window.open('', '_blank', 'width=400,height=600');
+  const win = window.open('', '_blank', 'width=400,height=600,menubar=no,toolbar=no,location=no,status=no,scrollbars=no');
   if (!win) {
     alert('Permite ventanas emergentes para imprimir el ticket');
     return;
@@ -373,6 +373,7 @@ window.imprimirTicket = (ventaData) => {
     `;
   }).join('');
 
+  // Logo
   let logoHtml = '';
   if (LOGO_BASE64) {
     logoHtml = `<img src="${LOGO_BASE64}" alt="Logo" style="max-width: 140px; height: auto; margin-bottom: 6px;">`;
@@ -417,23 +418,28 @@ Ante cualquier anomalía, el equipo será revisado por nuestro departamento téc
     <html>
     <head>
       <meta charset="UTF-8">
-      <title>Ticket de Venta</title>
+      <title>Ticket</title>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
           font-family: 'Arial', 'Helvetica', sans-serif;
           font-size: 14px;
           font-weight: bold;
-          padding: 10px;
+          padding: 0;
+          margin: 0;
           width: 80mm;
-          margin: 0 auto;
           background: #fff;
           line-height: 1.4;
         }
-        .ticket { text-align: center; }
+        .ticket {
+          width: 80mm;
+          padding: 6px 8px;
+          margin: 0 auto;
+          text-align: center;
+        }
         .ticket .logo { margin-bottom: 6px; }
-        .ticket hr { border: none; border-top: 1px dashed #aaa; margin: 6px 0; }
-        .ticket .items { text-align: left; margin: 6px 0; }
+        .ticket hr { border: none; border-top: 1px dashed #aaa; margin: 4px 0; }
+        .ticket .items { text-align: left; margin: 4px 0; }
         .ticket .items div {
           display: flex;
           justify-content: space-between;
@@ -453,17 +459,17 @@ Ante cualquier anomalía, el equipo será revisado por nuestro departamento téc
         .ticket .total {
           font-size: 20px;
           font-weight: bold;
-          margin: 6px 0;
-          padding: 6px 0;
+          margin: 4px 0;
+          padding: 4px 0;
           border-top: 2px solid #000;
           border-bottom: 2px solid #000;
         }
         .ticket .footer {
           font-size: 11px;
           color: #555;
-          margin-top: 10px;
+          margin-top: 8px;
           border-top: 1px dashed #aaa;
-          padding-top: 8px;
+          padding-top: 6px;
           font-weight: normal;
         }
         .ticket .no-devolucion {
@@ -483,7 +489,7 @@ Ante cualquier anomalía, el equipo será revisado por nuestro departamento téc
           font-size: 10.5px;
           line-height: 1.3;
           color: #222;
-          margin-top: 8px;
+          margin-top: 6px;
           padding-top: 6px;
           border-top: 1px dashed #aaa;
           white-space: pre-wrap;
@@ -491,8 +497,13 @@ Ante cualquier anomalía, el equipo será revisado por nuestro departamento téc
           font-weight: normal;
         }
         .ticket .terminos strong { font-weight: bold; }
+        @page {
+          size: 80mm auto;
+          margin: 0;
+        }
         @media print {
-          body { padding: 6px; }
+          body { margin: 0; padding: 0; }
+          .ticket { padding: 4px 6px; }
           .no-print { display: none; }
         }
       </style>
@@ -523,7 +534,14 @@ Ante cualquier anomalía, el equipo será revisado por nuestro departamento téc
         </div>
       </div>
       <script>
-        setTimeout(function() { window.print(); }, 500);
+        // Forzar impresión y cerrar ventana al terminar
+        window.onload = function() {
+          setTimeout(function() {
+            window.print();
+            // Cerrar automáticamente después de imprimir (o cancelar)
+            setTimeout(function() { window.close(); }, 1000);
+          }, 300);
+        };
       <\/script>
     </body>
     </html>
