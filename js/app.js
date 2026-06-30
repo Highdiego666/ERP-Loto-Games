@@ -68,32 +68,55 @@ function mostrarLogin() {
 
 // Cargar sistema después del login
 window.cargarSistemaLogin = (usuario) => {
+    console.log("🎉 Cargando sistema para:", usuario.nombre);
+    usuarioActual = usuario;
+    
     // Eliminar el login del DOM
     const loginRoot = document.getElementById('loginRoot');
     if (loginRoot) loginRoot.remove();
     
-    console.log("🎉 Cargando sistema para:", usuario.nombre);
-    usuarioActual = usuario;
+    // Mostrar sidebar y contenido principal
+    const sidebar = document.querySelector('.sidebar');
+    const mainContent = document.querySelector('.main-content');
+    if (sidebar) {
+        sidebar.style.display = 'flex';
+        console.log("✅ Sidebar visible");
+    } else {
+        console.error("❌ Sidebar no encontrado");
+    }
+    if (mainContent) {
+        mainContent.style.display = 'flex';
+        console.log("✅ Main content visible");
+    } else {
+        console.error("❌ Main content no encontrado");
+    }
     
-    // Mostrar sidebar y contenido
-    document.querySelector('.sidebar').style.display = 'flex';
-    document.querySelector('.main-content').style.display = 'flex';
+    // Actualizar nombre y rol en la barra lateral
+    const userNameSpan = document.getElementById('userNameSidebar');
+    const userRoleSpan = document.getElementById('userRoleSidebar');
+    if (userNameSpan) userNameSpan.innerText = usuario.nombre;
+    if (userRoleSpan) userRoleSpan.innerText = usuario.rol;
     
-    // Actualizar nombre de usuario en la barra lateral
-    document.getElementById('userNameSidebar').innerText = usuario.nombre;
-    document.getElementById('userRoleSidebar').innerText = usuario.rol;
-    
-    // Construir menú dinámico según privilegios
+    // Construir menú dinámico
     construirMenu(usuario);
     
-    // Cargar dashboard (si tiene acceso)
-    if (tieneAcceso('dashboard')) {
-        loadModule('dashboard');
+    // Cargar módulo por defecto (dashboard o el primero disponible)
+    const modulosAcceso = obtenerModulosAcceso(usuario);
+    console.log("📋 Módulos accesibles:", modulosAcceso);
+    
+    if (modulosAcceso.length > 0) {
+        const moduloInicial = modulosAcceso.includes('dashboard') ? 'dashboard' : modulosAcceso[0];
+        console.log("📦 Cargando módulo inicial:", moduloInicial);
+        loadModule(moduloInicial);
     } else {
-        const modulosAcceso = obtenerModulosAcceso(usuario);
-        if (modulosAcceso.length > 0) {
-            loadModule(modulosAcceso[0]);
-        }
+        console.error("❌ El usuario no tiene acceso a ningún módulo");
+        document.getElementById('content').innerHTML = `
+            <div style="background: var(--bg-card); border-radius: 16px; padding: 40px; text-align: center;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: var(--warning);"></i>
+                <h3>Sin módulos disponibles</h3>
+                <p>No tienes acceso a ningún módulo del sistema.</p>
+            </div>
+        `;
     }
 };
 
@@ -132,7 +155,10 @@ function construirMenu(usuario) {
 
 // Función principal para cargar módulos
 async function loadModule(moduleName) {
+    console.log("📦 loadModule llamado con:", moduleName);
+    
     if (!tieneAcceso(moduleName)) {
+        console.warn("⛔ Acceso denegado a:", moduleName);
         content.innerHTML = `
             <div style="background: var(--bg-card); border-radius: 16px; padding: 40px; text-align: center;">
                 <i class="fas fa-lock" style="font-size: 48px; color: var(--danger);"></i>
@@ -145,9 +171,16 @@ async function loadModule(moduleName) {
     
     currentModule = moduleName;
     const moduleFunction = window[`${moduleName}Module`];
+    console.log(`🔍 Módulo ${moduleName} es ${typeof moduleFunction}`);
     
     if (typeof moduleFunction === 'function') {
-        content.innerHTML = moduleFunction();
+        try {
+            content.innerHTML = moduleFunction();
+            console.log(`✅ Módulo ${moduleName} renderizado`);
+        } catch (error) {
+            console.error(`❌ Error al renderizar ${moduleName}:`, error);
+            content.innerHTML = `<div style="color:red;padding:20px">Error al cargar el módulo: ${error.message}</div>`;
+        }
         
         const titles = {
             dashboard: 'Dashboard',
@@ -177,6 +210,7 @@ async function loadModule(moduleName) {
         document.getElementById('pageDescription').innerText = descriptions[moduleName] || 'Módulo del sistema';
         
         setTimeout(async () => {
+            console.log(`🔄 Inicializando datos para ${moduleName}`);
             try {
                 switch(moduleName) {
                     case 'dashboard': if (window.actualizarDashboard) await window.actualizarDashboard(); break;
@@ -189,11 +223,13 @@ async function loadModule(moduleName) {
                     case 'reportes': if (window.actualizarReportes) await window.actualizarReportes(); break;
                     case 'traspasos': if (window.cargarTraspasos) await window.cargarTraspasos(); break;
                 }
+                console.log(`✅ Inicialización completada para ${moduleName}`);
             } catch (error) {
                 console.error(`Error en ${moduleName}:`, error);
             }
         }, 200);
     } else {
+        console.error(`❌ Módulo ${moduleName} no es una función`);
         content.innerHTML = `<div style="text-align:center;padding:50px"><h3>Módulo en construcción</h3><p>${moduleName}</p></div>`;
     }
     
