@@ -1,5 +1,5 @@
 // ============================================
-// LOTO GAMES POS - MÓDULO DE TRASPASOS (CORREGIDO)
+// LOTO GAMES POS - MÓDULO DE TRASPASOS (FULL)
 // ============================================
 
 window.traspasosModule = () => {
@@ -114,7 +114,7 @@ window.traspasosModule = () => {
           <h3 id="modalTraspasoTitulo">Nuevo Movimiento</h3>
           <span class="close-modal" onclick="window.cerrarModalTraspaso()">&times;</span>
         </div>
-        <form id="formTraspaso">
+        <form id="formTraspaso" novalidate>
           <input type="hidden" id="traspasoId">
           <div class="form-group">
             <label>Tipo de Movimiento *</label>
@@ -200,7 +200,7 @@ window.traspasosModule = () => {
 };
 
 // ============================================
-// VARIABLES GLOBALES (sin redeclarar productosData)
+// VARIABLES GLOBALES
 // ============================================
 
 let traspasosData = [];
@@ -318,16 +318,40 @@ window.filtrarTraspasos = () => {
   window.renderizarTraspasos(filtrados);
 };
 
+// ============================================
+// FUNCIÓN PARA CAMBIAR CAMPOS Y GESTIONAR REQUIRED
+// ============================================
+
 window.cambiarCamposTipo = () => {
   const tipo = document.getElementById('traspasoTipo').value;
-  document.getElementById('camposTraspasoLocal').style.display = tipo === 'traspaso_local' ? 'block' : 'none';
-  document.getElementById('camposLocatario').style.display = tipo === 'salida_locatario' ? 'block' : 'none';
-  document.getElementById('camposPago').style.display = tipo === 'pago_locatario' ? 'block' : 'none';
   
-  if (tipo === 'pago_locatario') {
+  // Mostrar/ocultar secciones
+  const camposLocal = document.getElementById('camposTraspasoLocal');
+  const camposLocatario = document.getElementById('camposLocatario');
+  const camposPago = document.getElementById('camposPago');
+  
+  camposLocal.style.display = tipo === 'traspaso_local' ? 'block' : 'none';
+  camposLocatario.style.display = tipo === 'salida_locatario' ? 'block' : 'none';
+  camposPago.style.display = tipo === 'pago_locatario' ? 'block' : 'none';
+  
+  // Quitar required de todos los campos condicionales
+  document.querySelectorAll('#camposTraspasoLocal [required], #camposLocatario [required], #camposPago [required]')
+    .forEach(el => el.removeAttribute('required'));
+  
+  // Agregar required solo a los campos visibles
+  if (tipo === 'traspaso_local') {
+    camposLocal.querySelectorAll('[required]').forEach(el => el.setAttribute('required', 'required'));
+  } else if (tipo === 'salida_locatario') {
+    camposLocatario.querySelectorAll('[required]').forEach(el => el.setAttribute('required', 'required'));
+  } else if (tipo === 'pago_locatario') {
+    camposPago.querySelectorAll('[required]').forEach(el => el.setAttribute('required', 'required'));
     window.cargarLocatariosSelect();
   }
 };
+
+// ============================================
+// FUNCIONES DE LOCATARIOS
+// ============================================
 
 window.cargarLocatariosSelect = () => {
   const select = document.getElementById('traspasoPagoLocatario');
@@ -341,18 +365,29 @@ window.actualizarLocatarios = () => {
   locatariosSet = locatarios;
 };
 
+// ============================================
+// MODALES Y ACCIONES
+// ============================================
+
 window.mostrarModalTraspaso = async () => {
   document.getElementById('modalTraspasoTitulo').innerText = 'Nuevo Movimiento';
   document.getElementById('traspasoId').value = '';
   document.getElementById('formTraspaso').reset();
+  
+  // Mostrar campos por defecto (traspaso local)
   document.getElementById('camposTraspasoLocal').style.display = 'block';
   document.getElementById('camposLocatario').style.display = 'none';
   document.getElementById('camposPago').style.display = 'none';
   
+  // Cargar productos
   const productos = await window.DB.getProductos();
   const select = document.getElementById('traspasoProducto');
   select.innerHTML = '<option value="">Seleccionar producto</option>' + 
     productos.map(p => `<option value="${p.id}">${p.nombre} (Stock: ${p.stock})</option>`).join('');
+  
+  // Establecer required iniciales
+  document.querySelectorAll('#camposTraspasoLocal [required]').forEach(el => el.setAttribute('required', 'required'));
+  document.querySelectorAll('#camposLocatario [required], #camposPago [required]').forEach(el => el.removeAttribute('required'));
   
   document.getElementById('modalTraspaso').style.display = 'flex';
 };
@@ -362,7 +397,7 @@ window.cerrarModalTraspaso = () => {
 };
 
 window.eliminarTraspaso = async (id) => {
-  if (confirm('¿Eliminar este movimiento?')) {
+  if (confirm('¿Eliminar este movimiento? Esta acción no revertirá el stock.')) {
     await window.DB.deleteTraspaso(id);
     await window.cargarTraspasos();
     if (window.cargarProductos) await window.cargarProductos();
@@ -390,6 +425,10 @@ window.registrarPago = async (id) => {
   await window.cargarTraspasos();
   alert('✅ Pago registrado');
 };
+
+// ============================================
+// EXPORTACIÓN Y REPORTES
+// ============================================
 
 window.exportarTraspasosCSV = () => {
   if (traspasosData.length === 0) {
