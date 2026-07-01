@@ -42,7 +42,7 @@ const DB = {
                         codigo_barras: producto.codigoBarras,
                         categoria: producto.categoria,
                         tipo: producto.tipo,
-                        local: producto.local || '', // <--- CAMPO LOCAL AGREGADO
+                        local: producto.local || '',
                         precio: parseFloat(producto.precio),
                         stock: parseInt(producto.stock),
                         created_at: new Date().toISOString()
@@ -56,7 +56,7 @@ const DB = {
         const productos = await this.getProductos();
         producto.id = Date.now();
         producto.createdAt = new Date().toISOString();
-        producto.local = producto.local || ''; // <--- CAMPO LOCAL AGREGADO
+        producto.local = producto.local || '';
         productos.push(producto);
         localStorage.setItem('productos', JSON.stringify(productos));
         return producto;
@@ -71,7 +71,7 @@ const DB = {
                         nombre: data.nombre,
                         categoria: data.categoria,
                         tipo: data.tipo,
-                        local: data.local || '', // <--- CAMPO LOCAL AGREGADO
+                        local: data.local || '',
                         precio: parseFloat(data.precio),
                         stock: parseInt(data.stock)
                     })
@@ -126,7 +126,7 @@ const DB = {
                     }])
                     .select();
                 if (error) throw error;
-                
+
                 // Actualizar stock de productos
                 if (venta.items) {
                     for (const item of venta.items) {
@@ -177,7 +177,7 @@ const DB = {
         return JSON.parse(localStorage.getItem('ventas') || '[]');
     },
 
-    // ========== USUARIOS ==========
+    // ========== USUARIOS (con PIN) ==========
     async getUsuarios() {
         try {
             if (window.supabase) {
@@ -430,7 +430,7 @@ const DB = {
         return true;
     },
 
-    // ========== TRASPASOS ==========
+    // ========== TRASPASOS (COMPLETO con todos los campos) ==========
     async getTraspasos() {
         try {
             if (window.supabase) {
@@ -457,22 +457,29 @@ const DB = {
                         cantidad: parseInt(traspaso.cantidad),
                         motivo: traspaso.motivo || '',
                         usuario: traspaso.usuario || 'Admin',
+                        local_origen: traspaso.local_origen || '',
+                        local_destino: traspaso.local_destino || '',
+                        locatario_nombre: traspaso.locatario_nombre || '',
+                        locatario_telefono: traspaso.locatario_telefono || '',
+                        monto: parseFloat(traspaso.monto) || 0,
+                        estado_pago: traspaso.estado_pago || 'pendiente',
+                        fecha_pago: traspaso.fecha_pago || null,
                         fecha: new Date().toISOString()
                     }])
                     .select();
                 if (error) throw error;
 
-                // Actualizar stock del producto
-                const producto = await this.getProductoById(traspaso.producto_id);
-                if (producto) {
-                    let nuevoStock = producto.stock;
-                    if (traspaso.tipo === 'entrada') {
-                        nuevoStock += parseInt(traspaso.cantidad);
-                    } else {
-                        nuevoStock -= parseInt(traspaso.cantidad);
+                // Actualizar stock (solo si es traspaso_local o salida_locatario)
+                if (traspaso.tipo === 'traspaso_local' || traspaso.tipo === 'salida_locatario') {
+                    const producto = await this.getProductoById(traspaso.producto_id);
+                    if (producto) {
+                        const nuevoStock = producto.stock - parseInt(traspaso.cantidad);
+                        await this.updateProducto(traspaso.producto_id, { stock: nuevoStock });
+                        console.log(`📦 Stock actualizado: ${producto.nombre} → ${nuevoStock}`);
                     }
-                    await this.updateProducto(traspaso.producto_id, { stock: nuevoStock });
                 }
+                // Para traspaso local, no sumamos stock al destino porque manejamos stock global.
+                // En el futuro se podría implementar inventario por local.
 
                 console.log('✅ Traspaso registrado en Supabase');
                 return data[0];
@@ -484,14 +491,42 @@ const DB = {
         traspasos.push(traspaso);
         localStorage.setItem('traspasos', JSON.stringify(traspasos));
         // Actualizar stock local
-        const productos = JSON.parse(localStorage.getItem('productos') || '[]');
-        const idx = productos.findIndex(p => p.id == traspaso.producto_id);
-        if (idx !== -1) {
-            if (traspaso.tipo === 'entrada') productos[idx].stock += parseInt(traspaso.cantidad);
-            else productos[idx].stock -= parseInt(traspaso.cantidad);
-            localStorage.setItem('productos', JSON.stringify(productos));
+        if (traspaso.tipo === 'traspaso_local' || traspaso.tipo === 'salida_locatario') {
+            const productos = JSON.parse(localStorage.getItem('productos') || '[]');
+            const idx = productos.findIndex(p => p.id == traspaso.producto_id);
+            if (idx !== -1) {
+                productos[idx].stock -= parseInt(traspaso.cantidad);
+                localStorage.setItem('productos', JSON.stringify(productos));
+            }
         }
         return traspaso;
+    },
+
+    async updateTraspaso(id, data) {
+        try {
+            if (window.supabase) {
+                const { error } = await window.supabase
+                    .from('traspasos')
+                    .update({
+                        motivo: data.motivo,
+                        estado_pago: data.estado_pago,
+                        monto: parseFloat(data.monto) || 0,
+                        fecha_pago: data.fecha_pago || null
+                    })
+                    .eq('id', id);
+                if (error) throw error;
+                console.log('✅ Traspaso actualizado');
+                return true;
+            }
+        } catch (e) { console.warn('Supabase error, actualizando local', e); }
+        let traspasos = JSON.parse(localStorage.getItem('traspasos') || '[]');
+        const index = traspasos.findIndex(t => t.id == id);
+        if (index !== -1) {
+            traspasos[index] = { ...traspasos[index], ...data };
+            localStorage.setItem('traspasos', JSON.stringify(traspasos));
+            return true;
+        }
+        return false;
     },
 
     async deleteTraspaso(id) {
@@ -520,9 +555,9 @@ const DB = {
         const clientes = await this.getClientes();
 
         const hoy = new Date();
-        hoy.setHours(0,0,0,0);
+        hoy.setHours(0, 0, 0, 0);
         const ventasHoy = ventas.filter(v => new Date(v.fecha) >= hoy);
-        const totalVentasHoy = ventasHoy.reduce((s,v) => s + (v.total||0), 0);
+        const totalVentasHoy = ventasHoy.reduce((s, v) => s + (v.total || 0), 0);
 
         return {
             totalProductos: productos.length,
@@ -542,7 +577,7 @@ const DB = {
                 // Opcional: eliminar datos de Supabase
                 // await window.supabase.from('productos').delete().neq('id', 0);
             }
-        } catch(e) {}
+        } catch (e) {}
         localStorage.clear();
         alert('Datos eliminados');
         location.reload();
