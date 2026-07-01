@@ -26,6 +26,11 @@ window.productosModule = () => `
         <option value="videojuegos">🎮 Videojuegos</option>
         <option value="refacciones">🔧 Refacciones</option>
       </select>
+      <select id="filtroLocal" class="form-control" style="width: auto;">
+        <option value="">Todos los locales</option>
+        <option value="14">🏪 Local 14</option>
+        <option value="20">🏪 Local 20</option>
+      </select>
       <button class="btn btn-primary" onclick="window.filtrarProductos()">Buscar</button>
     </div>
     
@@ -37,13 +42,14 @@ window.productosModule = () => `
             <th>Código Barras</th>
             <th>Producto</th>
             <th>Categoría</th>
+            <th>Local</th>
             <th>Precio</th>
             <th>Stock</th>
             <th>Acciones</th>
           </tr>
         </thead>
         <tbody id="tablaProductos">
-          <tr><td colspan="7" style="text-align: center;">Cargando productos...</td</tr>
+          <tr><td colspan="8" style="text-align: center;">Cargando productos...</td</tr>
         </tbody>
       </table>
     </div>
@@ -81,6 +87,14 @@ window.productosModule = () => `
           </select>
         </div>
         <div class="form-group">
+          <label>Local *</label>
+          <select id="prodLocal" class="form-control" required>
+            <option value="">Seleccionar local</option>
+            <option value="14">🏪 Local 14</option>
+            <option value="20">🏪 Local 20</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label>Precio * (MXN)</label>
           <input type="number" id="prodPrecio" class="form-control" required>
         </div>
@@ -108,7 +122,7 @@ window.renderizarTablaProductos = (productos) => {
   if (!tbody) return;
   
   if (productos.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No hay productos registrados</td</tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">No hay productos registrados</td</tr>';
     return;
   }
   
@@ -118,6 +132,7 @@ window.renderizarTablaProductos = (productos) => {
       <td><small>${p.codigo_barras || 'N/A'}</small></td>
       <td>${p.nombre}</td>
       <td><span style="background: var(--primary); padding: 4px 8px; border-radius: 8px; font-size: 11px;">${p.categoria}</span></td>
+      <td><span style="background: ${p.local === '14' ? '#10b981' : '#f59e0b'}; padding: 4px 8px; border-radius: 8px; font-size: 11px; color: white;">Local ${p.local || 'N/A'}</span></td>
       <td><strong style="color: var(--success);">$${parseFloat(p.precio).toLocaleString()}</strong></td>
       <td style="${p.stock < 5 ? 'color: var(--danger); font-weight: bold;' : ''}">${p.stock} unidades</td>
       <td>
@@ -138,6 +153,7 @@ window.renderizarTablaProductos = (productos) => {
 window.filtrarProductos = () => {
   const busqueda = document.getElementById('buscarProductoInput').value.toLowerCase();
   const categoria = document.getElementById('filtroCategoria').value;
+  const local = document.getElementById('filtroLocal').value;
   
   let filtrados = [...productosData];
   
@@ -151,6 +167,10 @@ window.filtrarProductos = () => {
   
   if (categoria) {
     filtrados = filtrados.filter(p => p.categoria === categoria);
+  }
+  
+  if (local) {
+    filtrados = filtrados.filter(p => p.local === local);
   }
   
   window.renderizarTablaProductos(filtrados);
@@ -175,6 +195,7 @@ window.editarProducto = (id) => {
     document.getElementById('prodNombre').value = producto.nombre;
     document.getElementById('prodCategoria').value = producto.categoria;
     document.getElementById('prodTipo').value = producto.tipo || 'nueva';
+    document.getElementById('prodLocal').value = producto.local || '';
     document.getElementById('prodPrecio').value = producto.precio;
     document.getElementById('prodStock').value = producto.stock;
     document.getElementById('modalProducto').style.display = 'flex';
@@ -191,7 +212,7 @@ window.eliminarProducto = async (id) => {
 };
 
 // ============================================
-// NUEVA FUNCIÓN: IMPRIMIR ETIQUETA 80x50mm
+// NUEVA FUNCIÓN: IMPRIMIR ETIQUETA 40x30mm
 // ============================================
 
 window.imprimirEtiqueta = function(id) {
@@ -201,8 +222,7 @@ window.imprimirEtiqueta = function(id) {
         return;
     }
 
-    // Abrir ventana emergente sin barras
-    const win = window.open("", "_blank", "width=400,height=300,menubar=no,toolbar=no,location=no,status=no,scrollbars=no,resizable=no");
+    const win = window.open("", "_blank", "width=300,height=250,menubar=no,toolbar=no,location=no,status=no,scrollbars=no,resizable=no");
     if (!win) {
         alert("⚠️ Permite ventanas emergentes para imprimir etiquetas");
         return;
@@ -218,7 +238,6 @@ window.imprimirEtiqueta = function(id) {
             <title>Local14</title>
             <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
             <style>
-                /* Eliminar márgenes y encabezados/pies de página */
                 * { margin: 0; padding: 0; box-sizing: border-box; }
                 body {
                     display: flex;
@@ -239,33 +258,31 @@ window.imprimirEtiqueta = function(id) {
                     flex-direction: column;
                     justify-content: center;
                     align-items: center;
-                    padding: 3mm;
+                    padding: 1mm;
                 }
                 .producto-nombre {
-                    font-size: 16pt;
+                    font-size: 11pt;
                     font-weight: bold;
-                    margin-bottom: 2mm;
-                    line-height: 1.2;
+                    margin-bottom: 1mm;
+                    line-height: 1.1;
                 }
                 .producto-sku {
-                    font-size: 12pt;
+                    font-size: 8pt;
                     color: #333;
-                    margin-bottom: 2mm;
+                    margin-bottom: 1mm;
                 }
                 #barcode {
                     width: 100%;
-                    max-width: 70mm;
+                    max-width: 35mm;
                     height: auto;
                 }
-                /* Configuración de página para impresión */
                 @page {
-                    size: 80mm 50mm;
+                    size: 40mm 30mm;
                     margin: 0;
                 }
                 @media print {
-                    body { margin: 0; padding: 0; width: 80mm; height: 50mm; }
-                    .etiqueta { padding: 2mm; }
-                    .no-print { display: none; }
+                    body { margin: 0; padding: 0; width: 40mm; height: 30mm; }
+                    .etiqueta { padding: 0.5mm; }
                 }
             </style>
         </head>
@@ -278,19 +295,16 @@ window.imprimirEtiqueta = function(id) {
             <script>
                 JsBarcode("#barcode", "${codigoBarras}", {
                     format: "CODE128",
-                    width: 1.8,
-                    height: 60,
+                    width: 1.2,
+                    height: 40,
                     displayValue: true,
-                    fontSize: 14,
-                    textMargin: 4,
+                    fontSize: 10,
+                    textMargin: 2,
                     background: "#ffffff",
                     lineColor: "#000000",
                     margin: 0
                 });
-                // Imprimir después de 0.5 segundos
-                setTimeout(function() {
-                    window.print();
-                }, 500);
+                setTimeout(function() { window.print(); }, 500);
             <\/script>
         </body>
         </html>
@@ -299,7 +313,7 @@ window.imprimirEtiqueta = function(id) {
 };
 
 // ============================================
-// GUARDAR PRODUCTO
+// GUARDAR PRODUCTO (con LOCAL)
 // ============================================
 
 document.addEventListener('submit', async (e) => {
@@ -309,16 +323,22 @@ document.addEventListener('submit', async (e) => {
     const nombre = document.getElementById('prodNombre').value;
     const categoria = document.getElementById('prodCategoria').value;
     const tipo = document.getElementById('prodTipo').value;
+    const local = document.getElementById('prodLocal').value;
     const precio = parseFloat(document.getElementById('prodPrecio').value);
     const stock = parseInt(document.getElementById('prodStock').value);
     
+    if (!local) {
+      alert('Selecciona un local');
+      return;
+    }
+    
     if (id) {
-      await window.DB.updateProducto(id, { nombre, categoria, tipo, precio, stock });
+      await window.DB.updateProducto(id, { nombre, categoria, tipo, local, precio, stock });
       alert('✅ Producto actualizado');
     } else {
       const sku = `LOT-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       const codigoBarras = sku;
-      await window.DB.saveProducto({ nombre, categoria, tipo, precio, stock, sku, codigoBarras });
+      await window.DB.saveProducto({ nombre, categoria, tipo, local, precio, stock, sku, codigoBarras });
       alert('✅ Producto creado');
     }
     
@@ -338,4 +358,4 @@ setTimeout(() => {
   }
 }, 100);
 
-console.log("✅ Módulo de productos cargado con impresión de etiquetas 80x50mm");
+console.log("✅ Módulo de productos cargado con LOCAL (14 y 20)");
