@@ -11,7 +11,7 @@ const DB = {
         }
     },
 
-    // ========== PRODUCTOS ==========
+    // ========== PRODUCTOS (con LOCAL) ==========
     async getProductos() {
         try {
             if (window.supabase) {
@@ -26,6 +26,11 @@ const DB = {
         return JSON.parse(localStorage.getItem('productos') || '[]');
     },
 
+    async getProductoById(id) {
+        const productos = await this.getProductos();
+        return productos.find(p => p.id == id);
+    },
+
     async saveProducto(producto) {
         try {
             if (window.supabase) {
@@ -37,6 +42,7 @@ const DB = {
                         codigo_barras: producto.codigoBarras,
                         categoria: producto.categoria,
                         tipo: producto.tipo,
+                        local: producto.local || '', // <--- CAMPO LOCAL AGREGADO
                         precio: parseFloat(producto.precio),
                         stock: parseInt(producto.stock),
                         created_at: new Date().toISOString()
@@ -47,9 +53,10 @@ const DB = {
                 return data[0];
             }
         } catch (e) { console.warn('Supabase error, guardando local', e); }
-        const productos = this.getProductos();
+        const productos = await this.getProductos();
         producto.id = Date.now();
         producto.createdAt = new Date().toISOString();
+        producto.local = producto.local || ''; // <--- CAMPO LOCAL AGREGADO
         productos.push(producto);
         localStorage.setItem('productos', JSON.stringify(productos));
         return producto;
@@ -64,6 +71,7 @@ const DB = {
                         nombre: data.nombre,
                         categoria: data.categoria,
                         tipo: data.tipo,
+                        local: data.local || '', // <--- CAMPO LOCAL AGREGADO
                         precio: parseFloat(data.precio),
                         stock: parseInt(data.stock)
                     })
@@ -192,6 +200,7 @@ const DB = {
                         nombre: usuario.nombre,
                         email: usuario.email,
                         password: usuario.password,
+                        pin: usuario.pin || '',
                         rol: usuario.rol,
                         estado: usuario.estado,
                         privilegios: usuario.privilegios || [],
@@ -323,7 +332,7 @@ const DB = {
         return true;
     },
 
-    // ========== SERVICIOS TÉCNICOS (ACTUALIZADO) ==========
+    // ========== SERVICIOS TÉCNICOS ==========
     async getServicios() {
         try {
             if (window.supabase) {
@@ -421,18 +430,100 @@ const DB = {
         return true;
     },
 
+    // ========== TRASPASOS ==========
+    async getTraspasos() {
+        try {
+            if (window.supabase) {
+                const { data, error } = await window.supabase
+                    .from('traspasos')
+                    .select('*')
+                    .order('fecha', { ascending: false });
+                if (error) throw error;
+                return data || [];
+            }
+        } catch (e) { console.warn('Supabase error, usando localStorage', e); }
+        return JSON.parse(localStorage.getItem('traspasos') || '[]');
+    },
+
+    async saveTraspaso(traspaso) {
+        try {
+            if (window.supabase) {
+                const { data, error } = await window.supabase
+                    .from('traspasos')
+                    .insert([{
+                        producto_id: traspaso.producto_id,
+                        producto_nombre: traspaso.producto_nombre,
+                        tipo: traspaso.tipo,
+                        cantidad: parseInt(traspaso.cantidad),
+                        motivo: traspaso.motivo || '',
+                        usuario: traspaso.usuario || 'Admin',
+                        fecha: new Date().toISOString()
+                    }])
+                    .select();
+                if (error) throw error;
+
+                // Actualizar stock del producto
+                const producto = await this.getProductoById(traspaso.producto_id);
+                if (producto) {
+                    let nuevoStock = producto.stock;
+                    if (traspaso.tipo === 'entrada') {
+                        nuevoStock += parseInt(traspaso.cantidad);
+                    } else {
+                        nuevoStock -= parseInt(traspaso.cantidad);
+                    }
+                    await this.updateProducto(traspaso.producto_id, { stock: nuevoStock });
+                }
+
+                console.log('✅ Traspaso registrado en Supabase');
+                return data[0];
+            }
+        } catch (e) { console.warn('Supabase error, guardando local', e); }
+        const traspasos = JSON.parse(localStorage.getItem('traspasos') || '[]');
+        traspaso.id = Date.now();
+        traspaso.createdAt = new Date().toISOString();
+        traspasos.push(traspaso);
+        localStorage.setItem('traspasos', JSON.stringify(traspasos));
+        // Actualizar stock local
+        const productos = JSON.parse(localStorage.getItem('productos') || '[]');
+        const idx = productos.findIndex(p => p.id == traspaso.producto_id);
+        if (idx !== -1) {
+            if (traspaso.tipo === 'entrada') productos[idx].stock += parseInt(traspaso.cantidad);
+            else productos[idx].stock -= parseInt(traspaso.cantidad);
+            localStorage.setItem('productos', JSON.stringify(productos));
+        }
+        return traspaso;
+    },
+
+    async deleteTraspaso(id) {
+        try {
+            if (window.supabase) {
+                const { error } = await window.supabase
+                    .from('traspasos')
+                    .delete()
+                    .eq('id', id);
+                if (error) throw error;
+                console.log('✅ Traspaso eliminado de Supabase');
+                return true;
+            }
+        } catch (e) { console.warn('Supabase error, eliminando local', e); }
+        let traspasos = JSON.parse(localStorage.getItem('traspasos') || '[]');
+        traspasos = traspasos.filter(t => t.id != id);
+        localStorage.setItem('traspasos', JSON.stringify(traspasos));
+        return true;
+    },
+
     // ========== ESTADÍSTICAS ==========
     async getStats() {
         const productos = await this.getProductos();
         const ventas = await this.getVentas();
         const servicios = await this.getServicios();
         const clientes = await this.getClientes();
-        
+
         const hoy = new Date();
         hoy.setHours(0,0,0,0);
         const ventasHoy = ventas.filter(v => new Date(v.fecha) >= hoy);
         const totalVentasHoy = ventasHoy.reduce((s,v) => s + (v.total||0), 0);
-        
+
         return {
             totalProductos: productos.length,
             stockBajo: productos.filter(p => p.stock < 5).length,
@@ -443,7 +534,7 @@ const DB = {
         };
     },
 
-    // ========== SEGURIDAD ==========
+    // ========== RESET (seguridad) ==========
     async resetDatabase() {
         if (!confirm('⚠️ ¿Estás seguro? Esto eliminará TODOS los datos locales y de Supabase.')) return;
         try {
