@@ -221,6 +221,16 @@ window.cargarTraspasos = async () => {
   }
 };
 
+// Helper seguro para actualizar elementos del DOM
+function setTextSafe(id, value, defaultValue = '0') {
+  const el = document.getElementById(id);
+  if (el) {
+    el.innerHTML = value;
+  } else {
+    console.warn(`Elemento #${id} no encontrado en el DOM`);
+  }
+}
+
 window.actualizarEstadisticasTraspasos = () => {
   const traspasos = traspasosData.filter(t => t.tipo === 'traspaso_local');
   const deudas = traspasosData.filter(t => t.tipo === 'salida_locatario' && t.estado_pago === 'pendiente');
@@ -229,10 +239,10 @@ window.actualizarEstadisticasTraspasos = () => {
   const hoy = new Date().toDateString();
   const hoyMovimientos = traspasosData.filter(t => new Date(t.fecha).toDateString() === hoy);
 
-  document.getElementById('totalTraspasos').innerHTML = traspasos.length;
-  document.getElementById('totalDeudas').innerHTML = `$${totalDeudas.toFixed(2)}`;
-  document.getElementById('totalLocatarios').innerHTML = locatarios.size;
-  document.getElementById('movimientosHoy').innerHTML = hoyMovimientos.length;
+  setTextSafe('totalTraspasos', traspasos.length);
+  setTextSafe('totalDeudas', `$${totalDeudas.toFixed(2)}`);
+  setTextSafe('totalLocatarios', locatarios.size);
+  setTextSafe('movimientosHoy', hoyMovimientos.length);
 };
 
 window.renderizarTraspasos = (data) => {
@@ -325,7 +335,6 @@ window.filtrarTraspasos = () => {
 window.cambiarCamposTipo = () => {
   const tipo = document.getElementById('traspasoTipo').value;
   
-  // Mostrar/ocultar secciones
   const camposLocal = document.getElementById('camposTraspasoLocal');
   const camposLocatario = document.getElementById('camposLocatario');
   const camposPago = document.getElementById('camposPago');
@@ -374,18 +383,15 @@ window.mostrarModalTraspaso = async () => {
   document.getElementById('traspasoId').value = '';
   document.getElementById('formTraspaso').reset();
   
-  // Mostrar campos por defecto (traspaso local)
   document.getElementById('camposTraspasoLocal').style.display = 'block';
   document.getElementById('camposLocatario').style.display = 'none';
   document.getElementById('camposPago').style.display = 'none';
   
-  // Cargar productos
   const productos = await window.DB.getProductos();
   const select = document.getElementById('traspasoProducto');
   select.innerHTML = '<option value="">Seleccionar producto</option>' + 
     productos.map(p => `<option value="${p.id}">${p.nombre} (Stock: ${p.stock})</option>`).join('');
   
-  // Establecer required iniciales
   document.querySelectorAll('#camposTraspasoLocal [required]').forEach(el => el.setAttribute('required', 'required'));
   document.querySelectorAll('#camposLocatario [required], #camposPago [required]').forEach(el => el.removeAttribute('required'));
   
@@ -398,10 +404,20 @@ window.cerrarModalTraspaso = () => {
 
 window.eliminarTraspaso = async (id) => {
   if (confirm('¿Eliminar este movimiento? Esta acción no revertirá el stock.')) {
-    await window.DB.deleteTraspaso(id);
-    await window.cargarTraspasos();
-    if (window.cargarProductos) await window.cargarProductos();
-    if (window.cargarInventario) await window.cargarInventario();
+    try {
+      await window.DB.deleteTraspaso(id);
+      await window.cargarTraspasos();
+      // Intenta actualizar otros módulos de forma segura
+      try {
+        if (window.cargarProductos) await window.cargarProductos();
+      } catch (e) { console.warn('Error al actualizar productos:', e); }
+      try {
+        if (window.cargarInventario) await window.cargarInventario();
+      } catch (e) { console.warn('Error al actualizar inventario:', e); }
+    } catch (error) {
+      console.error('Error al eliminar traspaso:', error);
+      alert('Error al eliminar el movimiento. Verifica la consola.');
+    }
   }
 };
 
@@ -417,13 +433,18 @@ window.registrarPago = async (id) => {
     return;
   }
   
-  if (montoPagado >= parseFloat(traspaso.monto)) {
-    await window.DB.updateTraspaso(id, { estado_pago: 'pagado', fecha_pago: new Date().toISOString() });
-  } else {
-    await window.DB.updateTraspaso(id, { estado_pago: 'parcial', monto: parseFloat(traspaso.monto) - montoPagado });
+  try {
+    if (montoPagado >= parseFloat(traspaso.monto)) {
+      await window.DB.updateTraspaso(id, { estado_pago: 'pagado', fecha_pago: new Date().toISOString() });
+    } else {
+      await window.DB.updateTraspaso(id, { estado_pago: 'parcial', monto: parseFloat(traspaso.monto) - montoPagado });
+    }
+    await window.cargarTraspasos();
+    alert('✅ Pago registrado');
+  } catch (error) {
+    console.error('Error al registrar pago:', error);
+    alert('Error al registrar el pago.');
   }
-  await window.cargarTraspasos();
-  alert('✅ Pago registrado');
 };
 
 // ============================================
@@ -478,94 +499,146 @@ window.generarReporteDeudas = () => {
 };
 
 // ============================================
-// GUARDAR TRASPASO
+// GUARDAR TRASPASO (CON MANEJO DE ERRORES)
 // ============================================
 
 document.addEventListener('submit', async (e) => {
   if (e.target.id === 'formTraspaso') {
     e.preventDefault();
     
-    const tipo = document.getElementById('traspasoTipo').value;
-    const productoId = document.getElementById('traspasoProducto').value;
-    const cantidad = parseInt(document.getElementById('traspasoCantidad').value);
-    const motivo = document.getElementById('traspasoMotivo').value.trim();
+    try {
+      const tipo = document.getElementById('traspasoTipo').value;
+      const productoId = document.getElementById('traspasoProducto').value;
+      const cantidad = parseInt(document.getElementById('traspasoCantidad').value);
+      const motivo = document.getElementById('traspasoMotivo').value.trim();
 
-    if (!productoId) return alert('Selecciona un producto');
-    if (!cantidad || cantidad < 1) return alert('Cantidad válida');
-
-    const productos = await window.DB.getProductos();
-    const producto = productos.find(p => p.id == parseInt(productoId));
-    if (!producto) return alert('Producto no encontrado');
-
-    let data = {
-      producto_id: producto.id,
-      producto_nombre: producto.nombre,
-      tipo: tipo,
-      cantidad: cantidad,
-      motivo: motivo || '',
-      usuario: window.usuarioActual?.nombre || 'Admin'
-    };
-
-    if (tipo === 'traspaso_local') {
-      const origen = document.getElementById('traspasoLocalOrigen').value;
-      const destino = document.getElementById('traspasoLocalDestino').value;
-      if (!origen || !destino) return alert('Selecciona origen y destino');
-      if (origen === destino) return alert('Origen y destino no pueden ser iguales');
-      if (producto.stock < cantidad) return alert(`Stock insuficiente en Local ${origen}`);
-      data.local_origen = origen;
-      data.local_destino = destino;
-    } 
-    else if (tipo === 'salida_locatario') {
-      const nombre = document.getElementById('traspasoLocatarioNombre').value.trim();
-      const telefono = document.getElementById('traspasoLocatarioTelefono').value.trim();
-      const monto = parseFloat(document.getElementById('traspasoMonto').value);
-      const estadoPago = document.getElementById('traspasoEstadoPago').value;
-      if (!nombre) return alert('Ingresa el nombre del locatario');
-      if (isNaN(monto) || monto < 0) return alert('Monto válido');
-      if (producto.stock < cantidad) return alert(`Stock insuficiente`);
-      data.locatario_nombre = nombre;
-      data.locatario_telefono = telefono;
-      data.monto = monto;
-      data.estado_pago = estadoPago;
-      data.local_origen = '14';
-    } 
-    else if (tipo === 'pago_locatario') {
-      const locatario = document.getElementById('traspasoPagoLocatario').value;
-      const montoPagado = parseFloat(document.getElementById('traspasoMontoPagado').value);
-      if (!locatario) return alert('Selecciona un locatario');
-      if (isNaN(montoPagado) || montoPagado <= 0) return alert('Monto válido');
-      const deudas = traspasosData.filter(t => t.locatario_nombre === locatario && t.estado_pago === 'pendiente');
-      if (deudas.length === 0) return alert('Este locatario no tiene deudas pendientes');
-      let restante = montoPagado;
-      for (const deuda of deudas) {
-        if (restante <= 0) break;
-        const montoDeuda = parseFloat(deuda.monto) || 0;
-        if (restante >= montoDeuda) {
-          await window.DB.updateTraspaso(deuda.id, { estado_pago: 'pagado', fecha_pago: new Date().toISOString() });
-          restante -= montoDeuda;
-        } else {
-          await window.DB.updateTraspaso(deuda.id, { estado_pago: 'parcial', monto: montoDeuda - restante });
-          restante = 0;
-        }
+      if (!productoId) {
+        alert('Selecciona un producto');
+        return;
       }
-      data.locatario_nombre = locatario;
-      data.monto = montoPagado;
-      data.estado_pago = 'pagado';
-      data.motivo = document.getElementById('traspasoMotivoPago').value || 'Pago registrado';
-      await window.DB.saveTraspaso(data);
+      if (!cantidad || cantidad < 1) {
+        alert('Cantidad válida');
+        return;
+      }
+
+      const productos = await window.DB.getProductos();
+      const producto = productos.find(p => p.id == parseInt(productoId));
+      if (!producto) {
+        alert('Producto no encontrado');
+        return;
+      }
+
+      let data = {
+        producto_id: producto.id,
+        producto_nombre: producto.nombre,
+        tipo: tipo,
+        cantidad: cantidad,
+        motivo: motivo || '',
+        usuario: window.usuarioActual?.nombre || 'Admin'
+      };
+
+      if (tipo === 'traspaso_local') {
+        const origen = document.getElementById('traspasoLocalOrigen').value;
+        const destino = document.getElementById('traspasoLocalDestino').value;
+        if (!origen || !destino) {
+          alert('Selecciona origen y destino');
+          return;
+        }
+        if (origen === destino) {
+          alert('Origen y destino no pueden ser iguales');
+          return;
+        }
+        if (producto.stock < cantidad) {
+          alert(`Stock insuficiente en Local ${origen}`);
+          return;
+        }
+        data.local_origen = origen;
+        data.local_destino = destino;
+      } 
+      else if (tipo === 'salida_locatario') {
+        const nombre = document.getElementById('traspasoLocatarioNombre').value.trim();
+        const telefono = document.getElementById('traspasoLocatarioTelefono').value.trim();
+        const monto = parseFloat(document.getElementById('traspasoMonto').value);
+        const estadoPago = document.getElementById('traspasoEstadoPago').value;
+        if (!nombre) {
+          alert('Ingresa el nombre del locatario');
+          return;
+        }
+        if (isNaN(monto) || monto < 0) {
+          alert('Monto válido');
+          return;
+        }
+        if (producto.stock < cantidad) {
+          alert(`Stock insuficiente`);
+          return;
+        }
+        data.locatario_nombre = nombre;
+        data.locatario_telefono = telefono;
+        data.monto = monto;
+        data.estado_pago = estadoPago;
+        data.local_origen = '14';
+      } 
+      else if (tipo === 'pago_locatario') {
+        const locatario = document.getElementById('traspasoPagoLocatario').value;
+        const montoPagado = parseFloat(document.getElementById('traspasoMontoPagado').value);
+        if (!locatario) {
+          alert('Selecciona un locatario');
+          return;
+        }
+        if (isNaN(montoPagado) || montoPagado <= 0) {
+          alert('Monto válido');
+          return;
+        }
+        const deudas = traspasosData.filter(t => t.locatario_nombre === locatario && t.estado_pago === 'pendiente');
+        if (deudas.length === 0) {
+          alert('Este locatario no tiene deudas pendientes');
+          return;
+        }
+        let restante = montoPagado;
+        for (const deuda of deudas) {
+          if (restante <= 0) break;
+          const montoDeuda = parseFloat(deuda.monto) || 0;
+          if (restante >= montoDeuda) {
+            await window.DB.updateTraspaso(deuda.id, { estado_pago: 'pagado', fecha_pago: new Date().toISOString() });
+            restante -= montoDeuda;
+          } else {
+            await window.DB.updateTraspaso(deuda.id, { estado_pago: 'parcial', monto: montoDeuda - restante });
+            restante = 0;
+          }
+        }
+        data.locatario_nombre = locatario;
+        data.monto = montoPagado;
+        data.estado_pago = 'pagado';
+        data.motivo = document.getElementById('traspasoMotivoPago').value || 'Pago registrado';
+        await window.DB.saveTraspaso(data);
+        window.cerrarModalTraspaso();
+        await window.cargarTraspasos();
+        alert(`✅ Pago de $${montoPagado.toFixed(2)} registrado para ${locatario}`);
+        return;
+      }
+
+      // Guardar el traspaso
+      console.log('📦 Datos a guardar:', data);
+      const resultado = await window.DB.saveTraspaso(data);
+      console.log('✅ Traspaso guardado en Supabase:', resultado);
+      
       window.cerrarModalTraspaso();
       await window.cargarTraspasos();
-      alert(`✅ Pago de $${montoPagado.toFixed(2)} registrado para ${locatario}`);
-      return;
+      
+      // Actualizar otros módulos de forma segura
+      try {
+        if (window.cargarProductos) await window.cargarProductos();
+      } catch (e) { console.warn('Error al actualizar productos:', e); }
+      try {
+        if (window.cargarInventario) await window.cargarInventario();
+      } catch (e) { console.warn('Error al actualizar inventario:', e); }
+      if (window.cargarProductosVenta) await window.cargarProductosVenta();
+      
+      alert('✅ Movimiento registrado correctamente');
+    } catch (error) {
+      console.error('❌ Error al guardar traspaso:', error);
+      alert('Error al guardar el movimiento. Verifica la consola (F12) para más detalles.');
     }
-
-    await window.DB.saveTraspaso(data);
-    window.cerrarModalTraspaso();
-    await window.cargarTraspasos();
-    if (window.cargarProductos) await window.cargarProductos();
-    if (window.cargarInventario) await window.cargarInventario();
-    if (window.cargarProductosVenta) await window.cargarProductosVenta();
-    alert('✅ Movimiento registrado correctamente');
   }
 });
 
@@ -578,3 +651,5 @@ setTimeout(() => {
     window.cargarTraspasos();
   }
 }, 100);
+
+console.log('✅ Módulo de traspasos cargado correctamente');
