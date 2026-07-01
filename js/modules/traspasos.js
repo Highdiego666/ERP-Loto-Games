@@ -1,5 +1,5 @@
 // ============================================
-// LOTO GAMES POS - MÓDULO DE TRASPASOS (COMPLETO)
+// LOTO GAMES POS - MÓDULO DE TRASPASOS (CORREGIDO)
 // ============================================
 
 window.traspasosModule = () => {
@@ -108,7 +108,6 @@ window.traspasosModule = () => {
       </div>
     </div>
 
-    <!-- Modal para nuevo movimiento -->
     <div id="modalTraspaso" class="modal">
       <div class="modal-content" style="max-width: 600px;">
         <div class="modal-header">
@@ -201,11 +200,10 @@ window.traspasosModule = () => {
 };
 
 // ============================================
-// VARIABLES GLOBALES
+// VARIABLES GLOBALES (sin redeclarar productosData)
 // ============================================
 
 let traspasosData = [];
-let productosData = [];
 let locatariosSet = new Set();
 
 // ============================================
@@ -215,7 +213,6 @@ let locatariosSet = new Set();
 window.cargarTraspasos = async () => {
   try {
     traspasosData = await window.DB.getTraspasos();
-    productosData = await window.DB.getProductos();
     window.actualizarEstadisticasTraspasos();
     window.renderizarTraspasos(traspasosData);
     window.actualizarLocatarios();
