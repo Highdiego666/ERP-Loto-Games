@@ -430,7 +430,7 @@ const DB = {
         return true;
     },
 
-    // ========== TRASPASOS (COMPLETO con todos los campos) ==========
+    // ========== TRASPASOS (COMPLETO) ==========
     async getTraspasos() {
         try {
             if (window.supabase) {
@@ -469,7 +469,7 @@ const DB = {
                     .select();
                 if (error) throw error;
 
-                // Actualizar stock (solo si es traspaso_local o salida_locatario)
+                // Actualizar stock (solo para traspasos locales y salidas a locatarios)
                 if (traspaso.tipo === 'traspaso_local' || traspaso.tipo === 'salida_locatario') {
                     const producto = await this.getProductoById(traspaso.producto_id);
                     if (producto) {
@@ -478,9 +478,6 @@ const DB = {
                         console.log(`📦 Stock actualizado: ${producto.nombre} → ${nuevoStock}`);
                     }
                 }
-                // Para traspaso local, no sumamos stock al destino porque manejamos stock global.
-                // En el futuro se podría implementar inventario por local.
-
                 console.log('✅ Traspaso registrado en Supabase');
                 return data[0];
             }
