@@ -508,7 +508,7 @@ reportada y reparada en este servicio.
         }
         .ticket .terminos {
           text-align: left;
-          font-size: 15px;
+          font-size: 8px;
           line-height: 1.3;
           color: #222;
           margin-top: 8px;
