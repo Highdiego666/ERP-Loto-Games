@@ -508,7 +508,7 @@ reportada y reparada en este servicio.
         }
         .ticket .terminos {
           text-align: left;
-          font-size: 14px;
+          font-size: 20px;
           line-height: 1.3;
           color: #222;
           margin-top: 8px;
@@ -546,8 +546,8 @@ reportada y reparada en este servicio.
         <div class="terminos">${terminosGarantia}</div>
         <hr>
         <div class="footer">
-          ¡Gracias por su compra!<br>
-          Visítanos en LOTO GAMES
+          
+          
         </div>
       </div>
       <script>
