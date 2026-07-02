@@ -453,7 +453,7 @@ reportada y reparada en este servicio.
           font-size: 20px;
           font-weight: bold;
           padding: 10px;
-          width: 80mm;
+          width: 74mm;
           margin: 0 auto;
           background: #fff;
           line-height: 1.4;
