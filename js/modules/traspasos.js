@@ -1,655 +1,605 @@
 // ============================================
-// LOTO GAMES POS - MÓDULO DE TRASPASOS (FULL)
+// LOTO GAMES POS - MÓDULO DE TRASPASOS V2
+// MOVIMIENTOS DE INVENTARIO ENTRE ALMACENES
+// ============================================
+
+// ============================================
+// CONFIGURACIÓN
+// ============================================
+const ALMACENES = {
+    'principal': { nombre: '🏪 Almacén Principal', color: '#3b82f6' },
+    'secundario': { nombre: '📦 Almacén Secundario', color: '#8b5cf6' },
+    'taller': { nombre: '🔧 Taller', color: '#f59e0b' },
+    'tienda': { nombre: '🏬 Tienda', color: '#10b981' }
+};
+
+// ============================================
+// MÓDULO PRINCIPAL
 // ============================================
 
 window.traspasosModule = () => {
-  return `
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-      <div>
-        <h2>🔄 Traspasos y Movimientos</h2>
-        <p style="color: var(--text-muted);">Traspasos entre locales, salidas a locatarios y gestión de deudas</p>
-      </div>
-      <button class="btn btn-primary" onclick="window.mostrarModalTraspaso()">
-        <i class="fas fa-plus"></i> Nuevo Movimiento
-      </button>
-    </div>
+    return `
+        <div class="page-header">
+            <h2><i class="fas fa-exchange-alt" style="color: #8b5cf6;"></i> Traspasos de Inventario</h2>
+            <p>Gestión de movimientos entre almacenes y registro de transferencias</p>
+        </div>
 
-    <div class="cards-grid" style="margin-bottom: 24px;">
-      <div class="stat-card">
-        <div class="stat-icon"><i class="fas fa-arrows-alt-h"></i></div>
-        <div class="stat-value" id="totalTraspasos">0</div>
-        <div class="stat-label">Traspasos entre locales</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon"><i class="fas fa-hand-holding-usd"></i></div>
-        <div class="stat-value" id="totalDeudas">$0</div>
-        <div class="stat-label">Deudas pendientes</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon"><i class="fas fa-users"></i></div>
-        <div class="stat-value" id="totalLocatarios">0</div>
-        <div class="stat-label">Locatarios con deuda</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon"><i class="fas fa-calendar-day"></i></div>
-        <div class="stat-value" id="movimientosHoy">0</div>
-        <div class="stat-label">Movimientos Hoy</div>
-      </div>
-    </div>
+        <!-- ============================================ -->
+        <!-- SECCIÓN: RESUMEN RÁPIDO                       -->
+        <!-- ============================================ -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px;">
+            <div class="stat-card" style="background: var(--bg-card); padding: 16px; border-radius: 12px; border-left: 4px solid #3b82f6;">
+                <div style="font-size: 12px; color: var(--text-muted);">Total Traspasos</div>
+                <div id="totalTraspasos" style="font-size: 28px; font-weight: bold; color: #3b82f6;">0</div>
+            </div>
+            <div class="stat-card" style="background: var(--bg-card); padding: 16px; border-radius: 12px; border-left: 4px solid #10b981;">
+                <div style="font-size: 12px; color: var(--text-muted);">Productos Trasladados</div>
+                <div id="totalProductosTrasladados" style="font-size: 28px; font-weight: bold; color: #10b981;">0</div>
+            </div>
+            <div class="stat-card" style="background: var(--bg-card); padding: 16px; border-radius: 12px; border-left: 4px solid #f59e0b;">
+                <div style="font-size: 12px; color: var(--text-muted);">Último Traspaso</div>
+                <div id="ultimoTraspaso" style="font-size: 14px; font-weight: bold; color: #f59e0b;">-</div>
+            </div>
+        </div>
 
-    <div class="table-container" style="margin-bottom: 24px;">
-      <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;">
-        <div style="flex: 1;">
-          <label style="font-size: 12px; color: var(--text-muted);">Buscar</label>
-          <input type="text" id="buscarTraspaso" class="form-control" placeholder="🔍 Producto, locatario o motivo..." onkeyup="window.filtrarTraspasos()">
-        </div>
-        <div style="width: 150px;">
-          <label style="font-size: 12px; color: var(--text-muted);">Tipo</label>
-          <select id="filtroTipo" class="form-control" onchange="window.filtrarTraspasos()">
-            <option value="">Todos</option>
-            <option value="traspaso_local">🔄 Traspaso entre locales</option>
-            <option value="salida_locatario">👤 Salida a locatario</option>
-            <option value="pago_locatario">💰 Pago de locatario</option>
-          </select>
-        </div>
-        <div style="width: 150px;">
-          <label style="font-size: 12px; color: var(--text-muted);">Estado de pago</label>
-          <select id="filtroEstadoPago" class="form-control" onchange="window.filtrarTraspasos()">
-            <option value="">Todos</option>
-            <option value="pendiente">⏳ Pendiente</option>
-            <option value="pagado">✅ Pagado</option>
-            <option value="parcial">🔄 Parcial</option>
-          </select>
-        </div>
-        <div style="width: 150px;">
-          <label style="font-size: 12px; color: var(--text-muted);">Local</label>
-          <select id="filtroLocal" class="form-control" onchange="window.filtrarTraspasos()">
-            <option value="">Todos</option>
-            <option value="14">🏪 Local 14</option>
-            <option value="20">🏪 Local 20</option>
-          </select>
-        </div>
-        <div style="width: 150px;">
-          <label style="font-size: 12px; color: var(--text-muted);">Desde</label>
-          <input type="date" id="filtroFechaInicio" class="form-control" onchange="window.filtrarTraspasos()">
-        </div>
-        <div style="width: 150px;">
-          <label style="font-size: 12px; color: var(--text-muted);">Hasta</label>
-          <input type="date" id="filtroFechaFin" class="form-control" onchange="window.filtrarTraspasos()">
-        </div>
-        <button class="btn btn-primary" onclick="window.filtrarTraspasos()">Filtrar</button>
-        <button class="btn btn-success" onclick="window.exportarTraspasosCSV()">📥 CSV</button>
-        <button class="btn btn-warning" onclick="window.generarReporteDeudas()">📊 Deudas</button>
-      </div>
-    </div>
+        <!-- ============================================ -->
+        <!-- SECCIÓN: NUEVO TRASPASO                       -->
+        <!-- ============================================ -->
+        <div class="card" style="margin-bottom: 24px; padding: 24px;">
+            <h3 style="margin-bottom: 16px;">➕ Nuevo Traspaso</h3>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <!-- Producto -->
+                <div style="grid-column: 1 / -1;">
+                    <label style="font-weight: 600;">📦 Producto</label>
+                    <div style="display: flex; gap: 10px;">
+                        <select id="selectProductoTraspaso" class="form-control" style="flex: 1; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-dark); color: var(--text);">
+                            <option value="">🔍 Buscar producto...</option>
+                        </select>
+                        <button class="btn btn-secondary" onclick="window.recargarProductosTraspaso()" style="padding: 12px 20px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 10px; cursor: pointer;">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                    <div id="infoProductoSeleccionado" style="margin-top: 8px; font-size: 14px; color: var(--text-muted); display: none; padding: 10px; background: var(--bg-dark); border-radius: 8px;">
+                        <span id="infoProductoNombre"></span> | 
+                        Stock: <strong id="infoProductoStock">0</strong> | 
+                        SKU: <span id="infoProductoSKU">-</span>
+                    </div>
+                </div>
 
-    <div class="table-container">
-      <div style="overflow-x: auto;">
-        <table style="width: 100%;">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Fecha</th>
-              <th>Tipo</th>
-              <th>Producto</th>
-              <th>Cant</th>
-              <th>Local Origen</th>
-              <th>Local Destino</th>
-              <th>Locatario</th>
-              <th>Monto</th>
-              <th>Estado Pago</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="tablaTraspasos">
-            <tr><td colspan="11" style="text-align: center;">Cargando movimientos...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+                <!-- Origen -->
+                <div>
+                    <label style="font-weight: 600;">🏪 Almacén Origen</label>
+                    <select id="selectOrigenTraspaso" class="form-control" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-dark); color: var(--text);" onchange="window.actualizarStockDisponible()">
+                        ${Object.entries(ALMACENES).map(([key, val]) => `
+                            <option value="${key}">${val.nombre}</option>
+                        `).join('')}
+                    </select>
+                </div>
 
-    <div id="modalTraspaso" class="modal">
-      <div class="modal-content" style="max-width: 600px;">
-        <div class="modal-header">
-          <h3 id="modalTraspasoTitulo">Nuevo Movimiento</h3>
-          <span class="close-modal" onclick="window.cerrarModalTraspaso()">&times;</span>
+                <!-- Destino -->
+                <div>
+                    <label style="font-weight: 600;">🏪 Almacén Destino</label>
+                    <select id="selectDestinoTraspaso" class="form-control" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-dark); color: var(--text);">
+                        ${Object.entries(ALMACENES).map(([key, val]) => `
+                            <option value="${key}">${val.nombre}</option>
+                        `).join('')}
+                    </select>
+                </div>
+
+                <!-- Cantidad -->
+                <div>
+                    <label style="font-weight: 600;">🔢 Cantidad</label>
+                    <input type="number" id="inputCantidadTraspaso" class="form-control" placeholder="Cantidad a trasladar" min="1" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-dark); color: var(--text);" oninput="window.validarCantidadTraspaso()">
+                    <div id="stockDisponibleLabel" style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Stock disponible: <span id="stockDisponibleValor">0</span></div>
+                </div>
+
+                <!-- Motivo -->
+                <div>
+                    <label style="font-weight: 600;">📝 Motivo</label>
+                    <select id="selectMotivoTraspaso" class="form-control" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-dark); color: var(--text);">
+                        <option value="Reposición de stock">📦 Reposición de stock</option>
+                        <option value="Devolución">🔄 Devolución</option>
+                        <option value="Transferencia entre tiendas">🏬 Transferencia entre tiendas</option>
+                        <option value="Ajuste de inventario">📊 Ajuste de inventario</option>
+                        <option value="Préstamo">🤝 Préstamo</option>
+                        <option value="Otro">📝 Otro</option>
+                    </select>
+                </div>
+
+                <!-- Botones -->
+                <div style="grid-column: 1 / -1; display: flex; gap: 10px; margin-top: 8px;">
+                    <button class="btn btn-success" onclick="window.registrarTraspaso()" style="flex: 1; padding: 14px; font-size: 16px; font-weight: bold; border: none; border-radius: 10px; background: #10b981; color: white; cursor: pointer;">
+                        <i class="fas fa-check-circle"></i> Registrar Traspaso
+                    </button>
+                    <button class="btn btn-secondary" onclick="window.limpiarFormularioTraspaso()" style="padding: 14px 28px; font-size: 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-dark); cursor: pointer;">
+                        <i class="fas fa-undo"></i> Limpiar
+                    </button>
+                </div>
+            </div>
         </div>
-        <form id="formTraspaso" novalidate>
-          <input type="hidden" id="traspasoId">
-          <div class="form-group">
-            <label>Tipo de Movimiento *</label>
-            <select id="traspasoTipo" class="form-control" required onchange="window.cambiarCamposTipo()">
-              <option value="traspaso_local">🔄 Traspaso entre locales</option>
-              <option value="salida_locatario">👤 Salida a locatario (crédito)</option>
-              <option value="pago_locatario">💰 Pago de locatario</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Producto *</label>
-            <select id="traspasoProducto" class="form-control" required>
-              <option value="">Seleccionar producto</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Cantidad *</label>
-            <input type="number" id="traspasoCantidad" class="form-control" min="1" required>
-          </div>
-          <div id="camposTraspasoLocal">
-            <div class="form-group">
-              <label>Local Origen *</label>
-              <select id="traspasoLocalOrigen" class="form-control" required>
-                <option value="14">🏪 Local 14</option>
-                <option value="20">🏪 Local 20</option>
-              </select>
+
+        <!-- ============================================ -->
+        <!-- SECCIÓN: LISTA DE TRASPASOS                   -->
+        <!-- ============================================ -->
+        <div class="card" style="padding: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+                <h3 style="margin: 0;">📋 Historial de Traspasos</h3>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="filtroTraspasos" class="form-control" placeholder="🔍 Filtrar por producto..." style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-dark); color: var(--text); width: 200px;" oninput="window.filtrarTraspasos()">
+                    <button class="btn btn-secondary" onclick="window.cargarTraspasos()" style="padding: 8px 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-dark); cursor: pointer;">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
             </div>
-            <div class="form-group">
-              <label>Local Destino *</label>
-              <select id="traspasoLocalDestino" class="form-control" required>
-                <option value="14">🏪 Local 14</option>
-                <option value="20">🏪 Local 20</option>
-              </select>
+            
+            <div id="tablaTraspasosContainer" style="overflow-x: auto;">
+                <table class="table" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: var(--bg-dark); border-bottom: 2px solid var(--border);">
+                            <th style="padding: 12px; text-align: left;">ID</th>
+                            <th style="padding: 12px; text-align: left;">Fecha</th>
+                            <th style="padding: 12px; text-align: left;">Producto</th>
+                            <th style="padding: 12px; text-align: left;">Origen</th>
+                            <th style="padding: 12px; text-align: left;">Destino</th>
+                            <th style="padding: 12px; text-align: center;">Cantidad</th>
+                            <th style="padding: 12px; text-align: left;">Motivo</th>
+                            <th style="padding: 12px; text-align: left;">Usuario</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaTraspasos">
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                                <i class="fas fa-spinner fa-pulse fa-2x"></i>
+                                <p style="margin-top: 10px;">Cargando traspasos...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
-          </div>
-          <div id="camposLocatario" style="display: none;">
-            <div class="form-group">
-              <label>Nombre del Locatario *</label>
-              <input type="text" id="traspasoLocatarioNombre" class="form-control" placeholder="Ej: Juan Pérez - Puesto 45" required>
+            
+            <!-- Paginación -->
+            <div id="paginacionTraspasos" style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);">
+                <span id="infoPaginacion" style="color: var(--text-muted); font-size: 14px;">Mostrando 0 traspasos</span>
+                <div style="display: flex; gap: 8px;">
+                    <button id="btnAnteriorTraspasos" class="btn btn-secondary" onclick="window.cambiarPaginaTraspasos(-1)" style="padding: 6px 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-dark); cursor: pointer;">◀ Anterior</button>
+                    <span id="paginaActualTraspasos" style="padding: 6px 14px; background: var(--primary); color: white; border-radius: 6px;">1</span>
+                    <button id="btnSiguienteTraspasos" class="btn btn-secondary" onclick="window.cambiarPaginaTraspasos(1)" style="padding: 6px 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-dark); cursor: pointer;">Siguiente ▶</button>
+                </div>
             </div>
-            <div class="form-group">
-              <label>Teléfono</label>
-              <input type="text" id="traspasoLocatarioTelefono" class="form-control" placeholder="Teléfono de contacto">
-            </div>
-            <div class="form-group">
-              <label>Monto (MXN) *</label>
-              <input type="number" id="traspasoMonto" class="form-control" step="0.01" min="0" placeholder="0.00" required>
-            </div>
-            <div class="form-group">
-              <label>Estado de Pago</label>
-              <select id="traspasoEstadoPago" class="form-control">
-                <option value="pendiente">⏳ Pendiente</option>
-                <option value="pagado">✅ Pagado</option>
-                <option value="parcial">🔄 Parcial</option>
-              </select>
-            </div>
-          </div>
-          <div id="camposPago" style="display: none;">
-            <div class="form-group">
-              <label>Locatario *</label>
-              <select id="traspasoPagoLocatario" class="form-control" required>
-                <option value="">Seleccionar locatario</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Monto Pagado *</label>
-              <input type="number" id="traspasoMontoPagado" class="form-control" step="0.01" min="0" placeholder="0.00" required>
-            </div>
-            <div class="form-group">
-              <label>Referencia / Comentario</label>
-              <input type="text" id="traspasoMotivoPago" class="form-control" placeholder="Ej: Pago parcial, liquidación...">
-            </div>
-          </div>
-          <div class="form-group">
-            <label>Motivo / Comentario</label>
-            <input type="text" id="traspasoMotivo" class="form-control" placeholder="Observaciones adicionales...">
-          </div>
-          <button type="submit" class="btn btn-primary" style="width: 100%;">Registrar Movimiento</button>
-        </form>
-      </div>
-    </div>
-  `;
+        </div>
+    `;
 };
 
 // ============================================
 // VARIABLES GLOBALES
 // ============================================
 
-let traspasosData = [];
-let locatariosSet = new Set();
+let traspasosCache = [];
+let productosCache = [];
+let paginaActualTraspasos = 1;
+const ITEMS_POR_PAGINA = 10;
 
 // ============================================
 // FUNCIONES PRINCIPALES
 // ============================================
 
-window.cargarTraspasos = async () => {
-  try {
-    traspasosData = await window.DB.getTraspasos();
-    window.actualizarEstadisticasTraspasos();
-    window.renderizarTraspasos(traspasosData);
-    window.actualizarLocatarios();
-  } catch (e) {
-    console.error('Error cargando traspasos:', e);
-  }
-};
-
-// Helper seguro para actualizar elementos del DOM
-function setTextSafe(id, value, defaultValue = '0') {
-  const el = document.getElementById(id);
-  if (el) {
-    el.innerHTML = value;
-  } else {
-    console.warn(`Elemento #${id} no encontrado en el DOM`);
-  }
-}
-
-window.actualizarEstadisticasTraspasos = () => {
-  const traspasos = traspasosData.filter(t => t.tipo === 'traspaso_local');
-  const deudas = traspasosData.filter(t => t.tipo === 'salida_locatario' && t.estado_pago === 'pendiente');
-  const totalDeudas = deudas.reduce((sum, t) => sum + (parseFloat(t.monto) || 0), 0);
-  const locatarios = new Set(traspasosData.filter(t => t.locatario_nombre).map(t => t.locatario_nombre));
-  const hoy = new Date().toDateString();
-  const hoyMovimientos = traspasosData.filter(t => new Date(t.fecha).toDateString() === hoy);
-
-  setTextSafe('totalTraspasos', traspasos.length);
-  setTextSafe('totalDeudas', `$${totalDeudas.toFixed(2)}`);
-  setTextSafe('totalLocatarios', locatarios.size);
-  setTextSafe('movimientosHoy', hoyMovimientos.length);
-};
-
-window.renderizarTraspasos = (data) => {
-  const tbody = document.getElementById('tablaTraspasos');
-  if (!tbody) return;
-  
-  if (data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="11" style="text-align: center;">No hay movimientos registrados</td></tr>';
-    return;
-  }
-
-  tbody.innerHTML = data.map(t => {
-    const tipoLabel = {
-      'traspaso_local': '🔄 Traspaso',
-      'salida_locatario': '👤 A locatario',
-      'pago_locatario': '💰 Pago'
-    }[t.tipo] || t.tipo;
-
-    const estadoPago = t.estado_pago ? 
-      `<span style="color: ${t.estado_pago === 'pagado' ? '#10b981' : t.estado_pago === 'parcial' ? '#f59e0b' : '#ef4444'}; font-weight: bold;">
-        ${t.estado_pago === 'pagado' ? '✅ Pagado' : t.estado_pago === 'parcial' ? '🔄 Parcial' : '⏳ Pendiente'}
-      </span>` : '-';
-
-    const localOrigen = t.local_origen ? `<span style="background: ${t.local_origen === '14' ? '#10b981' : '#f59e0b'}; padding: 2px 6px; border-radius: 6px; color: white;">${t.local_origen}</span>` : '-';
-    const localDestino = t.local_destino ? `<span style="background: ${t.local_destino === '14' ? '#10b981' : '#f59e0b'}; padding: 2px 6px; border-radius: 6px; color: white;">${t.local_destino}</span>` : '-';
-
-    return `
-      <tr>
-        <td>#${t.id}</td>
-        <td>${new Date(t.fecha).toLocaleString()}</td>
-        <td>${tipoLabel}</td>
-        <td><strong>${t.producto_nombre}</strong></td>
-        <td>${t.cantidad}</td>
-        <td>${localOrigen}</td>
-        <td>${localDestino}</td>
-        <td>${t.locatario_nombre || '-'}</td>
-        <td>${t.monto ? `$${parseFloat(t.monto).toFixed(2)}` : '-'}</td>
-        <td>${estadoPago}</td>
-        <td>
-          ${t.estado_pago === 'pendiente' && t.tipo === 'salida_locatario' ? 
-            `<button class="btn" style="background: var(--success); padding: 5px 10px; margin-bottom: 3px;" onclick="window.registrarPago(${t.id})">💰 Pagar</button>` : ''
-          }
-          <button class="btn" style="background: var(--danger); padding: 5px 10px;" onclick="window.eliminarTraspaso(${t.id})">
-            <i class="fas fa-trash"></i>
-          </button>
-        </td>
-      </tr>
-    `;
-  }).join('');
-};
-
-window.filtrarTraspasos = () => {
-  const busqueda = document.getElementById('buscarTraspaso').value.toLowerCase();
-  const tipo = document.getElementById('filtroTipo').value;
-  const estadoPago = document.getElementById('filtroEstadoPago').value;
-  const local = document.getElementById('filtroLocal').value;
-  const fechaInicio = document.getElementById('filtroFechaInicio').value;
-  const fechaFin = document.getElementById('filtroFechaFin').value;
-
-  let filtrados = [...traspasosData];
-
-  if (busqueda) {
-    filtrados = filtrados.filter(t => 
-      t.producto_nombre.toLowerCase().includes(busqueda) ||
-      (t.locatario_nombre && t.locatario_nombre.toLowerCase().includes(busqueda)) ||
-      (t.motivo && t.motivo.toLowerCase().includes(busqueda))
-    );
-  }
-  if (tipo) filtrados = filtrados.filter(t => t.tipo === tipo);
-  if (estadoPago) filtrados = filtrados.filter(t => t.estado_pago === estadoPago);
-  if (local) filtrados = filtrados.filter(t => t.local_origen === local || t.local_destino === local);
-  if (fechaInicio) {
-    const inicio = new Date(fechaInicio);
-    inicio.setHours(0,0,0,0);
-    filtrados = filtrados.filter(t => new Date(t.fecha) >= inicio);
-  }
-  if (fechaFin) {
-    const fin = new Date(fechaFin);
-    fin.setHours(23,59,59,999);
-    filtrados = filtrados.filter(t => new Date(t.fecha) <= fin);
-  }
-
-  window.renderizarTraspasos(filtrados);
-};
-
 // ============================================
-// FUNCIÓN PARA CAMBIAR CAMPOS Y GESTIONAR REQUIRED
+// CARGAR PRODUCTOS
 // ============================================
 
-window.cambiarCamposTipo = () => {
-  const tipo = document.getElementById('traspasoTipo').value;
-  
-  const camposLocal = document.getElementById('camposTraspasoLocal');
-  const camposLocatario = document.getElementById('camposLocatario');
-  const camposPago = document.getElementById('camposPago');
-  
-  camposLocal.style.display = tipo === 'traspaso_local' ? 'block' : 'none';
-  camposLocatario.style.display = tipo === 'salida_locatario' ? 'block' : 'none';
-  camposPago.style.display = tipo === 'pago_locatario' ? 'block' : 'none';
-  
-  // Quitar required de todos los campos condicionales
-  document.querySelectorAll('#camposTraspasoLocal [required], #camposLocatario [required], #camposPago [required]')
-    .forEach(el => el.removeAttribute('required'));
-  
-  // Agregar required solo a los campos visibles
-  if (tipo === 'traspaso_local') {
-    camposLocal.querySelectorAll('[required]').forEach(el => el.setAttribute('required', 'required'));
-  } else if (tipo === 'salida_locatario') {
-    camposLocatario.querySelectorAll('[required]').forEach(el => el.setAttribute('required', 'required'));
-  } else if (tipo === 'pago_locatario') {
-    camposPago.querySelectorAll('[required]').forEach(el => el.setAttribute('required', 'required'));
-    window.cargarLocatariosSelect();
-  }
-};
-
-// ============================================
-// FUNCIONES DE LOCATARIOS
-// ============================================
-
-window.cargarLocatariosSelect = () => {
-  const select = document.getElementById('traspasoPagoLocatario');
-  const locatarios = new Set(traspasosData.filter(t => t.locatario_nombre).map(t => t.locatario_nombre));
-  select.innerHTML = '<option value="">Seleccionar locatario</option>' + 
-    Array.from(locatarios).map(n => `<option value="${n}">${n}</option>`).join('');
-};
-
-window.actualizarLocatarios = () => {
-  const locatarios = new Set(traspasosData.filter(t => t.locatario_nombre).map(t => t.locatario_nombre));
-  locatariosSet = locatarios;
-};
-
-// ============================================
-// MODALES Y ACCIONES
-// ============================================
-
-window.mostrarModalTraspaso = async () => {
-  document.getElementById('modalTraspasoTitulo').innerText = 'Nuevo Movimiento';
-  document.getElementById('traspasoId').value = '';
-  document.getElementById('formTraspaso').reset();
-  
-  document.getElementById('camposTraspasoLocal').style.display = 'block';
-  document.getElementById('camposLocatario').style.display = 'none';
-  document.getElementById('camposPago').style.display = 'none';
-  
-  const productos = await window.DB.getProductos();
-  const select = document.getElementById('traspasoProducto');
-  select.innerHTML = '<option value="">Seleccionar producto</option>' + 
-    productos.map(p => `<option value="${p.id}">${p.nombre} (Stock: ${p.stock})</option>`).join('');
-  
-  document.querySelectorAll('#camposTraspasoLocal [required]').forEach(el => el.setAttribute('required', 'required'));
-  document.querySelectorAll('#camposLocatario [required], #camposPago [required]').forEach(el => el.removeAttribute('required'));
-  
-  document.getElementById('modalTraspaso').style.display = 'flex';
-};
-
-window.cerrarModalTraspaso = () => {
-  document.getElementById('modalTraspaso').style.display = 'none';
-};
-
-window.eliminarTraspaso = async (id) => {
-  if (confirm('¿Eliminar este movimiento? Esta acción no revertirá el stock.')) {
+window.cargarProductosTraspaso = async () => {
     try {
-      await window.DB.deleteTraspaso(id);
-      await window.cargarTraspasos();
-      // Intenta actualizar otros módulos de forma segura
-      try {
-        if (window.cargarProductos) await window.cargarProductos();
-      } catch (e) { console.warn('Error al actualizar productos:', e); }
-      try {
-        if (window.cargarInventario) await window.cargarInventario();
-      } catch (e) { console.warn('Error al actualizar inventario:', e); }
+        const productos = await window.DB.getProductos();
+        productosCache = productos || [];
+        const select = document.getElementById('selectProductoTraspaso');
+        if (!select) return;
+        
+        const productosConStock = productos.filter(p => p.stock > 0);
+        
+        select.innerHTML = `
+            <option value="">🔍 Seleccionar producto...</option>
+            ${productosConStock.map(p => `
+                <option value="${p.id}" data-stock="${p.stock}" data-sku="${p.sku}" data-nombre="${p.nombre}">
+                    ${p.nombre} (${p.sku}) - Stock: ${p.stock}
+                </option>
+            `).join('')}
+            ${productosConStock.length === 0 ? '<option value="" disabled>⚠️ No hay productos con stock disponible</option>' : ''}
+        `;
+
+        // Evento para mostrar info del producto seleccionado
+        select.onchange = function() {
+            const selected = this.options[this.selectedIndex];
+            const infoDiv = document.getElementById('infoProductoSeleccionado');
+            if (this.value) {
+                const stock = selected.dataset.stock || 0;
+                const sku = selected.dataset.sku || '-';
+                const nombre = selected.dataset.nombre || '';
+                document.getElementById('infoProductoNombre').textContent = nombre;
+                document.getElementById('infoProductoStock').textContent = stock;
+                document.getElementById('infoProductoSKU').textContent = sku;
+                infoDiv.style.display = 'block';
+                document.getElementById('stockDisponibleValor').textContent = stock;
+            } else {
+                infoDiv.style.display = 'none';
+            }
+            window.actualizarStockDisponible();
+        };
+
+        // Actualizar stock disponible
+        window.actualizarStockDisponible();
+
     } catch (error) {
-      console.error('Error al eliminar traspaso:', error);
-      alert('Error al eliminar el movimiento. Verifica la consola.');
+        console.error('Error cargando productos:', error);
     }
-  }
 };
 
-window.registrarPago = async (id) => {
-  const traspaso = traspasosData.find(t => t.id === id);
-  if (!traspaso) return;
-  
-  const monto = prompt(`Monto a pagar para ${traspaso.locatario_nombre} (Total: $${parseFloat(traspaso.monto).toFixed(2)}):`, traspaso.monto);
-  if (monto === null) return;
-  const montoPagado = parseFloat(monto);
-  if (isNaN(montoPagado) || montoPagado <= 0) {
-    alert('Monto inválido');
-    return;
-  }
-  
-  try {
-    if (montoPagado >= parseFloat(traspaso.monto)) {
-      await window.DB.updateTraspaso(id, { estado_pago: 'pagado', fecha_pago: new Date().toISOString() });
+window.recargarProductosTraspaso = () => {
+    window.cargarProductosTraspaso();
+};
+
+// ============================================
+// ACTUALIZAR STOCK DISPONIBLE
+// ============================================
+
+window.actualizarStockDisponible = () => {
+    const select = document.getElementById('selectProductoTraspaso');
+    const stockSpan = document.getElementById('stockDisponibleValor');
+    if (!select || !stockSpan) return;
+    
+    const selected = select.options[select.selectedIndex];
+    if (select.value && selected) {
+        const stock = parseInt(selected.dataset.stock) || 0;
+        stockSpan.textContent = stock;
     } else {
-      await window.DB.updateTraspaso(id, { estado_pago: 'parcial', monto: parseFloat(traspaso.monto) - montoPagado });
+        stockSpan.textContent = '0';
     }
-    await window.cargarTraspasos();
-    alert('✅ Pago registrado');
-  } catch (error) {
-    console.error('Error al registrar pago:', error);
-    alert('Error al registrar el pago.');
-  }
 };
 
 // ============================================
-// EXPORTACIÓN Y REPORTES
+// VALIDAR CANTIDAD
 // ============================================
 
-window.exportarTraspasosCSV = () => {
-  if (traspasosData.length === 0) {
-    alert('No hay datos para exportar');
-    return;
-  }
-  const headers = ['ID', 'Fecha', 'Tipo', 'Producto', 'Cantidad', 'Local Origen', 'Local Destino', 'Locatario', 'Monto', 'Estado Pago'];
-  const rows = traspasosData.map(t => [
-    t.id,
-    new Date(t.fecha).toLocaleString(),
-    t.tipo,
-    t.producto_nombre,
-    t.cantidad,
-    t.local_origen || '',
-    t.local_destino || '',
-    t.locatario_nombre || '',
-    t.monto || 0,
-    t.estado_pago || ''
-  ]);
-  const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `traspasos_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(blob);
-};
-
-window.generarReporteDeudas = () => {
-  const deudas = traspasosData.filter(t => t.tipo === 'salida_locatario' && t.estado_pago === 'pendiente');
-  if (deudas.length === 0) {
-    alert('✅ No hay deudas pendientes');
-    return;
-  }
-  const total = deudas.reduce((sum, t) => sum + (parseFloat(t.monto) || 0), 0);
-  let reporte = '📊 REPORTE DE DEUDAS PENDIENTES\n';
-  reporte += '═════════════════════════════════════════\n\n';
-  reporte += `Total de deudas: $${total.toFixed(2)}\n`;
-  reporte += `Número de locatarios: ${new Set(deudas.map(t => t.locatario_nombre)).size}\n\n`;
-  deudas.forEach(t => {
-    reporte += `👤 ${t.locatario_nombre}\n`;
-    reporte += `   📦 ${t.producto_nombre} x${t.cantidad}\n`;
-    reporte += `   💰 $${parseFloat(t.monto).toFixed(2)}\n`;
-    reporte += `   📅 ${new Date(t.fecha).toLocaleDateString()}\n\n`;
-  });
-  alert(reporte);
+window.validarCantidadTraspaso = () => {
+    const input = document.getElementById('inputCantidadTraspaso');
+    const stockSpan = document.getElementById('stockDisponibleValor');
+    if (!input || !stockSpan) return;
+    
+    const cantidad = parseInt(input.value) || 0;
+    const stock = parseInt(stockSpan.textContent) || 0;
+    
+    if (cantidad > stock) {
+        input.style.borderColor = '#ef4444';
+        input.style.borderWidth = '2px';
+    } else {
+        input.style.borderColor = 'var(--border)';
+        input.style.borderWidth = '1px';
+    }
 };
 
 // ============================================
-// GUARDAR TRASPASO (CON MANEJO DE ERRORES)
+// REGISTRAR TRASPASO
 // ============================================
 
-document.addEventListener('submit', async (e) => {
-  if (e.target.id === 'formTraspaso') {
-    e.preventDefault();
+window.registrarTraspaso = async () => {
+    const productoId = document.getElementById('selectProductoTraspaso').value;
+    const origen = document.getElementById('selectOrigenTraspaso').value;
+    const destino = document.getElementById('selectDestinoTraspaso').value;
+    const cantidad = parseInt(document.getElementById('inputCantidadTraspaso').value);
+    const motivo = document.getElementById('selectMotivoTraspaso').value;
+    const usuario = window.usuarioActual?.nombre || 'Admin';
+
+    // Validaciones
+    if (!productoId) {
+        alert('❌ Por favor, selecciona un producto');
+        return;
+    }
+    if (!cantidad || cantidad < 1) {
+        alert('❌ Ingresa una cantidad válida (mínimo 1)');
+        return;
+    }
+    if (origen === destino) {
+        alert('❌ El origen y destino no pueden ser el mismo almacén');
+        return;
+    }
+
+    // Confirmación
+    const producto = productosCache.find(p => p.id == productoId);
+    if (!producto) {
+        alert('❌ Producto no encontrado');
+        return;
+    }
+
+    const confirmar = confirm(`
+📋 CONFIRMAR TRASPASO
+
+Producto: ${producto.nombre}
+Cantidad: ${cantidad}
+Origen: ${ALMACENES[origen]?.nombre || origen}
+Destino: ${ALMACENES[destino]?.nombre || destino}
+Motivo: ${motivo}
+Usuario: ${usuario}
+
+⚠️ El stock se reducirá en ${origen} y aumentará en ${destino}
+
+¿Confirmar traspaso?
+    `);
+
+    if (!confirmar) return;
+
+    try {
+        // Verificar stock actual
+        const stockOrigen = producto.stock || 0;
+        if (cantidad > stockOrigen) {
+            alert(`❌ Stock insuficiente. Disponible: ${stockOrigen}`);
+            return;
+        }
+
+        // 1. Registrar traspaso en Supabase
+        const traspasoData = {
+            producto_id: producto.id,
+            producto_nombre: producto.nombre,
+            producto_sku: producto.sku,
+            origen: origen,
+            destino: destino,
+            cantidad: cantidad,
+            motivo: motivo || 'Traspaso de inventario',
+            usuario: usuario,
+            estado: 'completado',
+            fecha: new Date().toISOString(),
+            created_at: new Date().toISOString()
+        };
+
+        const { data, error } = await window.supabase
+            .from('traspasos')
+            .insert([traspasoData])
+            .select();
+
+        if (error) throw error;
+
+        // 2. Actualizar stock del producto
+        const nuevoStock = stockOrigen - cantidad;
+        const { error: updateError } = await window.supabase
+            .from('productos')
+            .update({ stock: nuevoStock })
+            .eq('id', producto.id);
+
+        if (updateError) throw updateError;
+
+        // 3. Actualizar caché local
+        await window.DB.actualizarProductoLocal(producto.id, { stock: nuevoStock });
+        productosCache = await window.DB.getProductos();
+
+        // 4. Mostrar éxito
+        alert(`✅ Traspaso registrado con éxito!\n\n📦 ${producto.nombre}\n🔢 ${cantidad} unidades\n📍 ${ALMACENES[origen]?.nombre || origen} → ${ALMACENES[destino]?.nombre || destino}\n📊 Stock restante: ${nuevoStock}`);
+
+        // 5. Limpiar formulario y recargar
+        window.limpiarFormularioTraspaso();
+        await window.cargarTraspasos();
+        await window.cargarProductosTraspaso();
+        window.actualizarEstadisticas();
+
+        // 6. Actualizar dashboard si está visible
+        if (typeof window.cargarDashboard === 'function') {
+            window.cargarDashboard();
+        }
+
+    } catch (error) {
+        console.error('Error registrando traspaso:', error);
+        alert(`❌ Error al registrar traspaso: ${error.message}`);
+    }
+};
+
+// ============================================
+// LIMPIAR FORMULARIO
+// ============================================
+
+window.limpiarFormularioTraspaso = () => {
+    document.getElementById('selectProductoTraspaso').value = '';
+    document.getElementById('selectOrigenTraspaso').value = 'principal';
+    document.getElementById('selectDestinoTraspaso').value = 'principal';
+    document.getElementById('inputCantidadTraspaso').value = '';
+    document.getElementById('selectMotivoTraspaso').value = 'Reposición de stock';
+    document.getElementById('infoProductoSeleccionado').style.display = 'none';
+    document.getElementById('stockDisponibleValor').textContent = '0';
+    document.getElementById('inputCantidadTraspaso').style.borderColor = 'var(--border)';
+};
+
+// ============================================
+// CARGAR TRASPASOS DESDE SUPABASE
+// ============================================
+
+window.cargarTraspasos = async () => {
+    const tbody = document.getElementById('tablaTraspasos');
+    if (!tbody) return;
     
     try {
-      const tipo = document.getElementById('traspasoTipo').value;
-      const productoId = document.getElementById('traspasoProducto').value;
-      const cantidad = parseInt(document.getElementById('traspasoCantidad').value);
-      const motivo = document.getElementById('traspasoMotivo').value.trim();
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                    <i class="fas fa-spinner fa-pulse fa-2x"></i>
+                    <p style="margin-top: 10px;">Cargando traspasos...</p>
+                </td>
+            </tr>
+        `;
 
-      if (!productoId) {
-        alert('Selecciona un producto');
-        return;
-      }
-      if (!cantidad || cantidad < 1) {
-        alert('Cantidad válida');
-        return;
-      }
+        // Obtener traspasos de Supabase
+        const { data, error } = await window.supabase
+            .from('traspasos')
+            .select('*')
+            .order('created_at', { ascending: false });
 
-      const productos = await window.DB.getProductos();
-      const producto = productos.find(p => p.id == parseInt(productoId));
-      if (!producto) {
-        alert('Producto no encontrado');
-        return;
-      }
+        if (error) throw error;
 
-      let data = {
-        producto_id: producto.id,
-        producto_nombre: producto.nombre,
-        tipo: tipo,
-        cantidad: cantidad,
-        motivo: motivo || '',
-        usuario: window.usuarioActual?.nombre || 'Admin'
-      };
+        traspasosCache = data || [];
+        window.actualizarEstadisticas();
+        window.renderizarTablaTraspasos();
 
-      if (tipo === 'traspaso_local') {
-        const origen = document.getElementById('traspasoLocalOrigen').value;
-        const destino = document.getElementById('traspasoLocalDestino').value;
-        if (!origen || !destino) {
-          alert('Selecciona origen y destino');
-          return;
-        }
-        if (origen === destino) {
-          alert('Origen y destino no pueden ser iguales');
-          return;
-        }
-        if (producto.stock < cantidad) {
-          alert(`Stock insuficiente en Local ${origen}`);
-          return;
-        }
-        data.local_origen = origen;
-        data.local_destino = destino;
-      } 
-      else if (tipo === 'salida_locatario') {
-        const nombre = document.getElementById('traspasoLocatarioNombre').value.trim();
-        const telefono = document.getElementById('traspasoLocatarioTelefono').value.trim();
-        const monto = parseFloat(document.getElementById('traspasoMonto').value);
-        const estadoPago = document.getElementById('traspasoEstadoPago').value;
-        if (!nombre) {
-          alert('Ingresa el nombre del locatario');
-          return;
-        }
-        if (isNaN(monto) || monto < 0) {
-          alert('Monto válido');
-          return;
-        }
-        if (producto.stock < cantidad) {
-          alert(`Stock insuficiente`);
-          return;
-        }
-        data.locatario_nombre = nombre;
-        data.locatario_telefono = telefono;
-        data.monto = monto;
-        data.estado_pago = estadoPago;
-        data.local_origen = '14';
-      } 
-      else if (tipo === 'pago_locatario') {
-        const locatario = document.getElementById('traspasoPagoLocatario').value;
-        const montoPagado = parseFloat(document.getElementById('traspasoMontoPagado').value);
-        if (!locatario) {
-          alert('Selecciona un locatario');
-          return;
-        }
-        if (isNaN(montoPagado) || montoPagado <= 0) {
-          alert('Monto válido');
-          return;
-        }
-        const deudas = traspasosData.filter(t => t.locatario_nombre === locatario && t.estado_pago === 'pendiente');
-        if (deudas.length === 0) {
-          alert('Este locatario no tiene deudas pendientes');
-          return;
-        }
-        let restante = montoPagado;
-        for (const deuda of deudas) {
-          if (restante <= 0) break;
-          const montoDeuda = parseFloat(deuda.monto) || 0;
-          if (restante >= montoDeuda) {
-            await window.DB.updateTraspaso(deuda.id, { estado_pago: 'pagado', fecha_pago: new Date().toISOString() });
-            restante -= montoDeuda;
-          } else {
-            await window.DB.updateTraspaso(deuda.id, { estado_pago: 'parcial', monto: montoDeuda - restante });
-            restante = 0;
-          }
-        }
-        data.locatario_nombre = locatario;
-        data.monto = montoPagado;
-        data.estado_pago = 'pagado';
-        data.motivo = document.getElementById('traspasoMotivoPago').value || 'Pago registrado';
-        await window.DB.saveTraspaso(data);
-        window.cerrarModalTraspaso();
-        await window.cargarTraspasos();
-        alert(`✅ Pago de $${montoPagado.toFixed(2)} registrado para ${locatario}`);
-        return;
-      }
-
-      // Guardar el traspaso
-      console.log('📦 Datos a guardar:', data);
-      const resultado = await window.DB.saveTraspaso(data);
-      console.log('✅ Traspaso guardado en Supabase:', resultado);
-      
-      window.cerrarModalTraspaso();
-      await window.cargarTraspasos();
-      
-      // Actualizar otros módulos de forma segura
-      try {
-        if (window.cargarProductos) await window.cargarProductos();
-      } catch (e) { console.warn('Error al actualizar productos:', e); }
-      try {
-        if (window.cargarInventario) await window.cargarInventario();
-      } catch (e) { console.warn('Error al actualizar inventario:', e); }
-      if (window.cargarProductosVenta) await window.cargarProductosVenta();
-      
-      alert('✅ Movimiento registrado correctamente');
     } catch (error) {
-      console.error('❌ Error al guardar traspaso:', error);
-      alert('Error al guardar el movimiento. Verifica la consola (F12) para más detalles.');
+        console.error('Error cargando traspasos:', error);
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" style="text-align: center; padding: 40px; color: var(--danger);">
+                    <i class="fas fa-exclamation-triangle fa-2x"></i>
+                    <p style="margin-top: 10px;">Error al cargar traspasos: ${error.message}</p>
+                </td>
+            </tr>
+        `;
     }
-  }
-});
+};
 
 // ============================================
-// INICIALIZACIÓN
+// RENDERIZAR TABLA DE TRASPASOS
 // ============================================
 
-setTimeout(() => {
-  if (document.getElementById('tablaTraspasos')) {
-    window.cargarTraspasos();
-  }
-}, 100);
+window.renderizarTablaTraspasos = () => {
+    const tbody = document.getElementById('tablaTraspasos');
+    if (!tbody) return;
 
-console.log('✅ Módulo de traspasos cargado correctamente');
+    const inicio = (paginaActualTraspasos - 1) * ITEMS_POR_PAGINA;
+    const fin = inicio + ITEMS_POR_PAGINA;
+    const paginaData = traspasosCache.slice(inicio, fin);
+
+    if (paginaData.length === 0 && traspasosCache.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                    <i class="fas fa-inbox fa-2x"></i>
+                    <p style="margin-top: 10px;">No hay traspasos registrados</p>
+                    <p style="font-size: 14px;">Registra tu primer traspaso usando el formulario de arriba</p>
+                </td>
+            </tr>
+        `;
+        document.getElementById('infoPaginacion').textContent = 'Mostrando 0 traspasos';
+        return;
+    }
+
+    if (paginaData.length === 0) {
+        paginaActualTraspasos = Math.max(1, paginaActualTraspasos - 1);
+        window.renderizarTablaTraspasos();
+        return;
+    }
+
+    tbody.innerHTML = paginaData.map(t => {
+        const origenNombre = ALMACENES[t.origen]?.nombre || t.origen || 'N/A';
+        const destinoNombre = ALMACENES[t.destino]?.nombre || t.destino || 'N/A';
+        const fecha = t.created_at || t.fecha;
+        
+        return `
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 12px;"><strong>#${t.id}</strong></td>
+                <td style="padding: 12px;">${fecha ? new Date(fecha).toLocaleString() : 'N/A'}</td>
+                <td style="padding: 12px; font-weight: 500;">${t.producto_nombre || t.producto || 'N/A'}</td>
+                <td style="padding: 12px;">
+                    <span style="display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; background: rgba(59, 130, 246, 0.15); color: #3b82f6;">
+                        ${origenNombre}
+                    </span>
+                </td>
+                <td style="padding: 12px;">
+                    <span style="display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; background: rgba(16, 185, 129, 0.15); color: #10b981;">
+                        ${destinoNombre}
+                    </span>
+                </td>
+                <td style="padding: 12px; text-align: center; font-weight: bold; font-size: 16px;">${t.cantidad}</td>
+                <td style="padding: 12px; font-size: 13px;">${t.motivo || '-'}</td>
+                <td style="padding: 12px;">${t.usuario || 'Admin'}</td>
+            </tr>
+        `;
+    }).join('');
+
+    // Actualizar paginación
+    const totalPaginas = Math.ceil(traspasosCache.length / ITEMS_POR_PAGINA);
+    document.getElementById('paginaActualTraspasos').textContent = paginaActualTraspasos;
+    document.getElementById('btnAnteriorTraspasos').style.visibility = paginaActualTraspasos > 1 ? 'visible' : 'hidden';
+    document.getElementById('btnSiguienteTraspasos').style.visibility = paginaActualTraspasos < totalPaginas ? 'visible' : 'hidden';
+    document.getElementById('infoPaginacion').textContent = `Mostrando ${Math.min(traspasosCache.length, inicio + ITEMS_POR_PAGINA)} de ${traspasosCache.length} traspasos`;
+};
+
+// ============================================
+// PAGINACIÓN
+// ============================================
+
+window.cambiarPaginaTraspasos = (direccion) => {
+    const totalPaginas = Math.ceil(traspasosCache.length / ITEMS_POR_PAGINA);
+    const nuevaPagina = paginaActualTraspasos + direccion;
+    
+    if (nuevaPagina < 1 || nuevaPagina > totalPaginas) return;
+    
+    paginaActualTraspasos = nuevaPagina;
+    window.renderizarTablaTraspasos();
+};
+
+// ============================================
+// FILTRAR TRASPASOS
+// ============================================
+
+window.filtrarTraspasos = () => {
+    const filtro = document.getElementById('filtroTraspasos').value.toLowerCase().trim();
+    if (!filtro) {
+        window.renderizarTablaTraspasos();
+        return;
+    }
+    
+    const filtrados = traspasosCache.filter(t => 
+        (t.producto_nombre || '').toLowerCase().includes(filtro) ||
+        (t.producto || '').toLowerCase().includes(filtro) ||
+        (t.producto_sku || '').toLowerCase().includes(filtro)
+    );
+    
+    const tbody = document.getElementById('tablaTraspasos');
+    if (filtrados.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" style="text-align: center; padding: 30px; color: var(--text-muted);">
+                    <i class="fas fa-search"></i> No se encontraron traspasos con "${filtro}"
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    // Mostrar filtrados sin paginación
+    tbody.innerHTML = filtrados.map(t => {
+        const origenNombre = ALMACENES[t.origen]?.nombre || t.origen || 'N/A';
+        const destinoNombre = ALMACENES[t.destino]?.nombre || t.destino || 'N/A';
+        return `
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 12px;"><strong>#${t.id}</strong></td>
+                <td style="padding: 12px;">${t.created_at ? new Date(t.created_at).toLocaleString() : 'N/A'}</td>
+                <td style="padding: 12px; font-weight: 500;">${t.producto_nombre || t.producto || 'N/A'}</td>
+                <td style="padding: 12px;"><span style="display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; background: rgba(59, 130, 246, 0.15); color: #3b82f6;">${origenNombre}</span></td>
+                <td style="padding: 12px;"><span style="display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; background: rgba(16, 185, 129, 0.15); color: #10b981;">${destinoNombre}</span></td>
+                <td style="padding: 12px; text-align: center; font-weight: bold; font-size: 16px;">${t.cantidad}</td>
+                <td style="padding: 12px;">${t.motivo || '-'}</td>
+                <td style="padding: 12px;">${t.usuario || 'Admin'}</td>
+            </tr>
+        `;
+    }).join('');
+};
+
+// ============================================
+// ACTUALIZAR ESTADÍSTICAS
+// ============================================
+
+window.actualizarEstadisticas = () => {
+    const total = traspasosCache.length;
+    const totalProductos = traspasosCache.reduce((sum, t) => sum + (t.cantidad || 0), 0);
+    const ultimo = traspasosCache.length > 0 ? traspasosCache[0] : null;
+    
+    document.getElementById('totalTraspasos').textContent = total;
+    document.getElementById('totalProductosTrasladados').textContent = totalProductos;
+    document.getElementById('ultimoTraspaso').textContent = ultimo ? 
+        `${ultimo.producto_nombre || ultimo.producto} (${ultimo.cantidad} unid.)` : '-';
+};
+
+// ============================================
+// INICIALIZACIÓN DEL MÓDULO
+// ============================================
+
+setTimeout(async () => {
+    if (document.getElementById('selectProductoTraspaso')) {
+        await window.cargarProductosTraspaso();
+        await window.cargarTraspasos();
+        window.actualizarEstadisticas();
+    }
+}, 300);
