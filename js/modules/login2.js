@@ -11,6 +11,7 @@ window.verificarPIN = async (pin) => {
   const usuarios = [
     { id: 1, nombre: "Diego Perez", pin: "1620", rol: "admin", email: "admin@lotogames.com", privilegios: [] },
     { id: 2, nombre: "Francisco Lopez", pin: "2005", rol: "admin", email: "admin@lotogames.com", privilegios: [] },
+    { id: 1, nombre: "Carlos", pin: "0811", rol: "admin", email: "admin@lotogames.com", privilegios: [] },
     { id: 3, nombre: "Charlie", pin: "2025", rol: "admin", email: "admin@lotogames.com", privilegios: [] },
     { id: 4, nombre: "Charlie", pin: "1420", rol: "soporte", email: "soporte@lotogames.com", privilegios: [] },
     { id: 5, nombre: "Alejandra", pin: "2222", rol: "vendedor", email: "vendedor@lotogames.com", privilegios: [] },
