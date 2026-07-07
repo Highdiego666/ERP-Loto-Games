@@ -1,6 +1,5 @@
 // ============================================
-// LOTO GAMES POS - MÓDULO DE VENTAS (74mm)
-// CON PRECIOS MODIFICABLES, IMPRESIÓN Y TÉRMINOS
+// LOTO GAMES POS - MÓDULO DE VENTAS
 // ============================================
 
 let carritoVentas = [];
@@ -9,55 +8,13 @@ let descuentoActivo = false;
 // ============================================
 // CONFIGURACIÓN DEL LOGO
 // ============================================
-const LOGO_BASE64 = ''; // <--- PEGA TU LOGO AQUÍ
+const LOGO_BASE64 = '';
 
 // ============================================
-// TÉRMINOS Y CONDICIONES (Visibles en interfaz y ticket)
-// ============================================
-const TERMINOS_CONDICIONES = `
-═══════════════════════════════════
-📋 TÉRMINOS Y CONDICIONES
-═══════════════════════════════════
-
-🔧 GARANTÍA POR REPARACIÓN: 30 DÍAS
-La garantía cubre ÚNICAMENTE la falla
-específica reportada y reparada.
-
-❌ LA GARANTÍA SE ANULA SI:
-1. El equipo es abierto, manipulado o
-   reparado por personal ajeno.
-2. Daños por líquidos, golpes, caídas
-   o mal uso.
-3. Software/firmware no autorizado.
-4. Etiqueta de seguridad rota o alterada.
-5. El daño original es diferente al
-   reportado.
-
-⚠️ IMPORTANTE:
-• Guarda este ticket como comprobante.
-• Garantía personal e intransferible.
-• Aplica solo en nuestra tienda física.
-• No cubre piezas estéticas.
-
-✅ DERECHO DE REVISIÓN:
-Ante cualquier anomalía, el equipo será
-revisado por nuestro departamento técnico.
-
-🕐 HORARIO DE GARANTÍAS:
-Lun-Vie: 11:00 a 17:00
-Sábado y Domingo: No atendemos garantías
-
-═══════════════════════════════════
-¡Gracias por confiar en LOTO GAMES!
-📞 (55) 1234-5678
-═══════════════════════════════════
-`;
-
-// ============================================
-// MÓDULO DE VENTAS - PRINCIPAL
+// MÓDULO PRINCIPAL
 // ============================================
 
-window.ventasModule = () => {
+window.ventasModule = function() {
     return `
         <div style="display: grid; grid-template-columns: 1fr 400px; gap: 24px;">
             <div>
@@ -133,18 +90,6 @@ window.ventasModule = () => {
                         </button>
                     </div>
                 </div>
-
-                <!-- ============================================ -->
-                <!-- TÉRMINOS Y CONDICIONES (VISIBLE EN INTERFAZ) -->
-                <!-- ============================================ -->
-                <div class="table-container" style="margin-top: 20px; background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2);">
-                    <h4 style="color: #d32f2f; margin-bottom: 8px;">
-                        <i class="fas fa-file-contract"></i> Términos y Condiciones
-                    </h4>
-                    <div style="font-size: 11px; color: var(--text-muted); line-height: 1.6; max-height: 200px; overflow-y: auto; white-space: pre-wrap; font-family: 'Arial', sans-serif; padding: 8px; background: var(--bg-dark); border-radius: 8px;">
-                        ${TERMINOS_CONDICIONES}
-                    </div>
-                </div>
             </div>
         </div>
     `;
@@ -154,7 +99,7 @@ window.ventasModule = () => {
 // FUNCIONES DEL CARRITO
 // ============================================
 
-window.cargarUsuariosVenta = async () => {
+window.cargarUsuariosVenta = async function() {
     try {
         const usuarios = await window.DB.getUsuarios();
         const select = document.getElementById('usuarioVenta');
@@ -169,7 +114,7 @@ window.cargarUsuariosVenta = async () => {
     }
 };
 
-window.cargarProductosVenta = async () => {
+window.cargarProductosVenta = async function() {
     try {
         const productos = await window.DB.getProductos();
         const productosConStock = productos.filter(p => p.stock > 0);
@@ -181,7 +126,7 @@ window.cargarProductosVenta = async () => {
             return;
         }
         
-        container.innerHTML = productosConStock.map(p => {
+        container.innerHTML = productosConStock.map(function(p) {
             const precioBase = parseFloat(p.precio);
             const precioConRecargo = precioBase * 1.05;
             return `
@@ -202,7 +147,7 @@ window.cargarProductosVenta = async () => {
     }
 };
 
-window.buscarProductoVenta = async () => {
+window.buscarProductoVenta = async function() {
     const busqueda = document.getElementById('buscadorProducto').value.trim().toLowerCase();
     const resultadoDiv = document.getElementById('resultadoBusqueda');
     
@@ -213,11 +158,11 @@ window.buscarProductoVenta = async () => {
     
     try {
         const productos = await window.DB.getProductos();
-        const producto = productos.find(p => 
-            (p.sku && p.sku.toLowerCase() === busqueda) || 
-            (p.codigo_barras && p.codigo_barras === busqueda) ||
-            (p.nombre && p.nombre.toLowerCase().includes(busqueda))
-        );
+        const producto = productos.find(function(p) {
+            return (p.sku && p.sku.toLowerCase() === busqueda) || 
+                   (p.codigo_barras && p.codigo_barras === busqueda) ||
+                   (p.nombre && p.nombre.toLowerCase().includes(busqueda));
+        });
         
         if (producto && producto.stock > 0) {
             const precioBase = parseFloat(producto.precio);
@@ -254,13 +199,13 @@ window.buscarProductoVenta = async () => {
 };
 
 // ============================================
-// AGREGAR AL CARRITO CON PRECIO MODIFICABLE
+// AGREGAR AL CARRITO
 // ============================================
 
-window.agregarAlCarrito = async (id) => {
+window.agregarAlCarrito = async function(id) {
     try {
         const productos = await window.DB.getProductos();
-        const producto = productos.find(p => p.id == id);
+        const producto = productos.find(function(p) { return p.id == id; });
         if (!producto) {
             alert('❌ Producto no encontrado');
             return;
@@ -273,13 +218,12 @@ window.agregarAlCarrito = async (id) => {
         const precioBase = parseFloat(producto.precio);
         const precioConRecargo = precioBase * 1.05;
         
-        // Preguntar si modificar el precio
-        const modificarPrecio = confirm(`💰 ¿Modificar precio de "${producto.nombre}"?\n\nPrecio actual: $${precioConRecargo.toFixed(2)}\n\n"OK" para modificar - "Cancelar" para usar el precio actual`);
+        const modificarPrecio = confirm('💰 ¿Modificar precio de "' + producto.nombre + '"?\n\nPrecio actual: $' + precioConRecargo.toFixed(2) + '\n\n"OK" para modificar - "Cancelar" para usar el precio actual');
         
         let precioFinal = precioConRecargo;
         
         if (modificarPrecio) {
-            const nuevoPrecio = prompt(`💲 Ingresa el nuevo precio para "${producto.nombre}":`, precioConRecargo.toFixed(2));
+            const nuevoPrecio = prompt('💲 Ingresa el nuevo precio para "' + producto.nombre + '":', precioConRecargo.toFixed(2));
             if (nuevoPrecio !== null) {
                 const precioIngresado = parseFloat(nuevoPrecio);
                 if (!isNaN(precioIngresado) && precioIngresado > 0) {
@@ -291,11 +235,10 @@ window.agregarAlCarrito = async (id) => {
             }
         }
         
-        // Verificar si ya está en el carrito
-        const existente = carritoVentas.find(item => item.id === id && item.tipo === 'producto');
+        const existente = carritoVentas.find(function(item) { return item.id === id && item.tipo === 'producto'; });
         if (existente) {
             if (existente.cantidad + 1 > producto.stock) {
-                alert(`⚠️ Stock insuficiente. Solo hay ${producto.stock}`);
+                alert('⚠️ Stock insuficiente. Solo hay ' + producto.stock);
                 return;
             }
             existente.precioBase = precioFinal / 1.05;
@@ -327,7 +270,7 @@ window.agregarAlCarrito = async (id) => {
 // VENTA RÁPIDA
 // ============================================
 
-window.agregarVentaRapida = () => {
+window.agregarVentaRapida = function() {
     const concepto = document.getElementById('ventaRapidaConcepto').value.trim();
     const monto = parseFloat(document.getElementById('ventaRapidaMonto').value);
     
@@ -342,7 +285,7 @@ window.agregarVentaRapida = () => {
     
     carritoVentas.push({
         id: Date.now(),
-        nombre: `🔧 ${concepto}`,
+        nombre: '🔧 ' + concepto,
         precioBase: monto,
         precioPersonalizado: monto,
         cantidad: 1,
@@ -356,10 +299,10 @@ window.agregarVentaRapida = () => {
 };
 
 // ============================================
-// RENDERIZAR CARRITO CON PRECIO MODIFICABLE
+// RENDERIZAR CARRITO
 // ============================================
 
-window.renderCarritoVentas = () => {
+window.renderCarritoVentas = function() {
     const container = document.getElementById('carritoVentas');
     if (!container) return;
     
@@ -372,7 +315,7 @@ window.renderCarritoVentas = () => {
     let totalBase = 0;
     let totalConRecargo = 0;
     
-    container.innerHTML = carritoVentas.map((item, index) => {
+    container.innerHTML = carritoVentas.map(function(item, index) {
         const precioBase = item.precioBase;
         const precioConRecargo = item.precioPersonalizado || (item.precioBase * 1.05);
         const itemTotalBase = precioBase * item.cantidad;
@@ -387,14 +330,14 @@ window.renderCarritoVentas = () => {
                 <div style="flex: 2;">
                     <strong>${item.nombre}${precioModificado}</strong><br>
                     <small>$${precioConRecargo.toFixed(2)} c/u</small>
-                    ${item.precioPersonalizado ? `<small style="color: #f59e0b;"> (Precio modificado)</small>` : ''}
+                    ${item.precioPersonalizado ? '<small style="color: #f59e0b;"> (Precio modificado)</small>' : ''}
                 </div>
                 <div style="flex: 1; text-align: center;">
                     ${item.tipo === 'producto' ? `
                         <button onclick="window.modificarCantidad(${index}, -1)" style="background: var(--gray); border: none; width: 25px; height: 25px; border-radius: 5px; cursor: pointer; color: white;">-</button>
                         <span style="margin: 0 8px;">${item.cantidad}</span>
                         <button onclick="window.modificarCantidad(${index}, 1)" style="background: var(--gray); border: none; width: 25px; height: 25px; border-radius: 5px; cursor: pointer; color: white;">+</button>
-                    ` : `<span>1</span>`}
+                    ` : '<span>1</span>'}
                 </div>
                 <div style="flex: 1; text-align: right;">
                     $${itemTotalRecargo.toFixed(2)}
@@ -412,15 +355,15 @@ window.renderCarritoVentas = () => {
     }).join('');
     
     let totalMostrar = descuentoActivo ? totalBase : totalConRecargo;
-    document.getElementById('totalCarrito').innerHTML = `$${totalMostrar.toFixed(2)}`;
-    window._totalesCarrito = { totalBase, totalConRecargo };
+    document.getElementById('totalCarrito').innerHTML = '$' + totalMostrar.toFixed(2);
+    window._totalesCarrito = { totalBase: totalBase, totalConRecargo: totalConRecargo };
 };
 
 // ============================================
 // MODIFICAR PRECIO DESDE EL CARRITO
 // ============================================
 
-window.modificarPrecioCarrito = (index) => {
+window.modificarPrecioCarrito = function(index) {
     const item = carritoVentas[index];
     if (!item) return;
     if (item.tipo === 'rapida') {
@@ -429,7 +372,7 @@ window.modificarPrecioCarrito = (index) => {
     }
     
     const precioActual = item.precioPersonalizado || (item.precioBase * 1.05);
-    const nuevoPrecio = prompt(`💲 Modificar precio de "${item.nombre}"\n\nPrecio actual: $${precioActual.toFixed(2)}\n\nIngresa el nuevo precio:`, precioActual.toFixed(2));
+    const nuevoPrecio = prompt('💲 Modificar precio de "' + item.nombre + '"\n\nPrecio actual: $' + precioActual.toFixed(2) + '\n\nIngresa el nuevo precio:', precioActual.toFixed(2));
     
     if (nuevoPrecio !== null) {
         const precioIngresado = parseFloat(nuevoPrecio);
@@ -437,7 +380,7 @@ window.modificarPrecioCarrito = (index) => {
             item.precioBase = precioIngresado / 1.05;
             item.precioPersonalizado = precioIngresado;
             window.renderCarritoVentas();
-            alert(`✅ Precio de "${item.nombre}" actualizado a $${precioIngresado.toFixed(2)}`);
+            alert('✅ Precio de "' + item.nombre + '" actualizado a $' + precioIngresado.toFixed(2));
         } else {
             alert('❌ Precio inválido. No se realizaron cambios.');
         }
@@ -445,10 +388,10 @@ window.modificarPrecioCarrito = (index) => {
 };
 
 // ============================================
-// OTRAS FUNCIONES DEL CARRITO
+// OTRAS FUNCIONES
 // ============================================
 
-window.toggleDescuento = () => {
+window.toggleDescuento = function() {
     descuentoActivo = !descuentoActivo;
     const btn = document.getElementById('btnDescuento');
     if (btn) {
@@ -458,7 +401,7 @@ window.toggleDescuento = () => {
     window.renderCarritoVentas();
 };
 
-window.modificarCantidad = async (index, delta) => {
+window.modificarCantidad = async function(index, delta) {
     const item = carritoVentas[index];
     if (!item) return;
     
@@ -472,7 +415,7 @@ window.modificarCantidad = async (index, delta) => {
     
     try {
         const productos = await window.DB.getProductos();
-        const producto = productos.find(p => p.id == item.id);
+        const producto = productos.find(function(p) { return p.id == item.id; });
         const nuevaCantidad = item.cantidad + delta;
         
         if (nuevaCantidad < 1) {
@@ -480,7 +423,7 @@ window.modificarCantidad = async (index, delta) => {
         } else if (producto && nuevaCantidad <= producto.stock) {
             item.cantidad = nuevaCantidad;
         } else {
-            alert(`⚠️ Stock insuficiente. Solo hay ${producto?.stock || 0}`);
+            alert('⚠️ Stock insuficiente. Solo hay ' + (producto?.stock || 0));
             return;
         }
         window.renderCarritoVentas();
@@ -490,12 +433,12 @@ window.modificarCantidad = async (index, delta) => {
     }
 };
 
-window.eliminarDelCarrito = (index) => {
+window.eliminarDelCarrito = function(index) {
     carritoVentas.splice(index, 1);
     window.renderCarritoVentas();
 };
 
-window.limpiarCarrito = () => {
+window.limpiarCarrito = function() {
     if (carritoVentas.length === 0) return;
     if (confirm('¿Vaciar todo el carrito?')) {
         carritoVentas = [];
@@ -510,10 +453,10 @@ window.limpiarCarrito = () => {
 };
 
 // ============================================
-// FINALIZAR VENTA CON IMPRESIÓN
+// FINALIZAR VENTA
 // ============================================
 
-window.finalizarVenta = async () => {
+window.finalizarVenta = async function() {
     if (carritoVentas.length === 0) {
         alert('❌ El carrito está vacío');
         return;
@@ -526,36 +469,19 @@ window.finalizarVenta = async () => {
     const { totalBase, totalConRecargo } = window._totalesCarrito || { totalBase: 0, totalConRecargo: 0 };
     const totalFinal = descuentoActivo ? totalBase : totalConRecargo;
 
-    const resumen = carritoVentas.map(item => {
+    const resumen = carritoVentas.map(function(item) {
         const precioConRecargo = item.precioPersonalizado || (item.precioBase * 1.05);
         const subtotal = descuentoActivo ? (item.precioBase * item.cantidad) : (precioConRecargo * item.cantidad);
-        return `${item.nombre} x${item.cantidad} = $${subtotal.toFixed(2)}`;
+        return item.nombre + ' x' + item.cantidad + ' = $' + subtotal.toFixed(2);
     }).join('\n');
 
-    // Mostrar términos y condiciones antes de confirmar
-    const mensaje = `
-📋 CONFIRMAR VENTA
-
-${resumen}
-
-─────────────────────────
-💰 TOTAL: $${totalFinal.toFixed(2)}
-💳 Método: ${metodoPago}
-👤 Vendedor: ${usuario}
-${descuentoActivo ? '✅ Descuento 5% aplicado' : ''}
-
-─────────────────────────
-${TERMINOS_CONDICIONES}
-─────────────────────────
-
-¿Confirmar venta?
-    `;
+    const mensaje = '📋 CONFIRMAR VENTA\n\n' + resumen + '\n\n' + '💰 TOTAL: $' + totalFinal.toFixed(2) + '\n💳 Método: ' + metodoPago + '\n👤 Vendedor: ' + usuario + (descuentoActivo ? '\n✅ Descuento 5% aplicado' : '') + '\n\n¿Confirmar venta?';
 
     if (!confirm(mensaje)) return;
 
     try {
         const venta = {
-            items: [...carritoVentas],
+            items: carritoVentas.slice(),
             total: totalFinal,
             metodoPago: metodoPago,
             comentario: comentario,
@@ -566,15 +492,13 @@ ${TERMINOS_CONDICIONES}
 
         await window.DB.registrarVenta(venta);
 
-        // Guardar copia de los items para el ticket
-        const itemsVenta = [...carritoVentas];
+        const itemsVenta = carritoVentas.slice();
         const totalVenta = totalFinal;
         const metodoPagoVenta = metodoPago;
         const comentarioVenta = comentario;
         const usuarioVenta = usuario;
         const descuentoAplicado = descuentoActivo;
 
-        // Limpiar carrito
         carritoVentas = [];
         descuentoActivo = false;
         const btn = document.getElementById('btnDescuento');
@@ -586,9 +510,8 @@ ${TERMINOS_CONDICIONES}
         await window.cargarProductosVenta();
         document.getElementById('comentarioVenta').value = '';
 
-        alert(`✅ Venta realizada con éxito\n\nTotal: $${totalVenta.toFixed(2)}`);
+        alert('✅ Venta realizada con éxito\n\nTotal: $' + totalVenta.toFixed(2));
 
-        // ✅ IMPRIMIR TICKET CON TÉRMINOS Y CONDICIONES
         if (confirm('🖨️ ¿Deseas imprimir el ticket de la venta?')) {
             window.imprimirTicketVenta({
                 items: itemsVenta,
@@ -608,10 +531,10 @@ ${TERMINOS_CONDICIONES}
 };
 
 // ============================================
-// IMPRIMIR TICKET DE VENTA (74mm) CON TÉRMINOS
+// IMPRIMIR TICKET
 // ============================================
 
-window.imprimirTicketVenta = (ventaData) => {
+window.imprimirTicketVenta = function(ventaData) {
     if (!ventaData) {
         alert('❌ No hay datos de venta para imprimir');
         return;
@@ -631,58 +554,13 @@ window.imprimirTicketVenta = (ventaData) => {
     const comentario = ventaData.comentario || '';
     const descuento = ventaData.descuentoAplicado ? '✅ Descuento 5% aplicado' : '';
 
-    // Detalle de productos
-    let itemsHtml = items.map(item => {
+    let itemsHtml = items.map(function(item) {
         const precio = item.precioPersonalizado || (item.precioBase * 1.05);
         const subtotal = precio * item.cantidad;
-        return `
-            <div style="display: flex; justify-content: space-between; padding: 2px 0; font-size: 11px; border-bottom: 1px dotted #ddd;">
-                <span style="font-weight: bold;">${item.nombre}</span>
-                <span>${item.cantidad} x $${precio.toFixed(2)}</span>
-                <span style="font-weight: bold; color: #10b981;">$${subtotal.toFixed(2)}</span>
-            </div>
-        `;
+        return '<div style="display: flex; justify-content: space-between; padding: 2px 0; font-size: 11px; border-bottom: 1px dotted #ddd;"><span style="font-weight: bold;">' + item.nombre + '</span><span>' + item.cantidad + ' x $' + precio.toFixed(2) + '</span><span style="font-weight: bold; color: #10b981;">$' + subtotal.toFixed(2) + '</span></div>';
     }).join('');
 
-    // Logo HTML
-    const logoHtml = LOGO_BASE64 ? 
-        `<img src="${LOGO_BASE64}" alt="Logo" style="max-width: 120px; height: auto; margin-bottom: 4px;">` :
-        `<div style="font-size: 20px; font-weight: bold; letter-spacing: 2px; color: #1e293b;">LOTO <span style="color: #10b981;">GAMES</span></div>`;
-
-    // Términos y condiciones para el ticket
-    const terminosTicket = `
-TÉRMINOS DE GARANTÍA
-─────────────────────────
-🔧 GARANTÍA POR REPARACIÓN: 30 DÍAS
-La garantía cubre ÚNICAMENTE la falla
-específica reportada y reparada.
-
-❌ LA GARANTÍA SE ANULA SI:
-1. El equipo es abierto, manipulado o
-   reparado por personal ajeno.
-2. Daños por líquidos, golpes, caídas
-   o mal uso.
-3. Software/firmware no autorizado.
-4. Etiqueta de seguridad rota o alterada.
-5. El daño original es diferente al
-   reportado.
-
-⚠️ IMPORTANTE:
-• Guarda este ticket como comprobante.
-• Garantía personal e intransferible.
-• Aplica solo en nuestra tienda física.
-• No cubre piezas estéticas.
-
-✅ DERECHO DE REVISIÓN:
-Ante cualquier anomalía, el equipo será
-revisado por nuestro departamento técnico.
-
-🕐 HORARIO DE GARANTÍAS:
-Lun-Vie: 11:00 a 17:00
-Sábado y Domingo: No atendemos garantías
-─────────────────────────
-¡Gracias por confiar en LOTO GAMES!
-    `;
+    const logoHtml = LOGO_BASE64 ? '<img src="' + LOGO_BASE64 + '" alt="Logo" style="max-width: 120px; height: auto; margin-bottom: 4px;">' : '<div style="font-size: 20px; font-weight: bold; letter-spacing: 2px; color: #1e293b;">LOTO <span style="color: #10b981;">GAMES</span></div>';
 
     win.document.write(`
         <!DOCTYPE html>
@@ -692,57 +570,17 @@ Sábado y Domingo: No atendemos garantías
             <title>Ticket de Venta</title>
             <style>
                 * { margin: 0; padding: 0; box-sizing: border-box; }
-                body {
-                    font-family: 'Arial', 'Helvetica', sans-serif;
-                    font-size: 11px;
-                    padding: 5px;
-                    width: 74mm;
-                    min-height: 200mm;
-                    margin: 0 auto;
-                    background: #fff;
-                    line-height: 1.5;
-                }
+                body { font-family: 'Arial', 'Helvetica', sans-serif; font-size: 11px; padding: 5px; width: 74mm; min-height: 200mm; margin: 0 auto; background: #fff; line-height: 1.5; }
                 .ticket { text-align: center; }
                 .ticket .logo { margin-bottom: 4px; }
                 .ticket .subtitle { font-size: 11px; color: #666; margin-bottom: 4px; }
                 .ticket hr { border: none; border-top: 1px dashed #aaa; margin: 4px 0; }
-                .ticket .info-line {
-                    display: flex;
-                    justify-content: space-between;
-                    font-size: 11px;
-                    padding: 2px 0;
-                }
-                .ticket .total-grande {
-                    font-size: 22px;
-                    font-weight: bold;
-                    color: #10b981;
-                    padding: 8px 0;
-                }
+                .ticket .info-line { display: flex; justify-content: space-between; font-size: 11px; padding: 2px 0; }
+                .ticket .total-grande { font-size: 22px; font-weight: bold; color: #10b981; padding: 8px 0; }
                 .ticket .items { text-align: left; margin: 4px 0; }
-                .ticket .footer {
-                    font-size: 9px;
-                    color: #888;
-                    margin-top: 6px;
-                    border-top: 1px dashed #aaa;
-                    padding-top: 6px;
-                }
-                .ticket .terminos {
-                    text-align: left;
-                    font-size: 8px;
-                    color: #555;
-                    padding: 4px 0;
-                    border-top: 1px dashed #ddd;
-                    margin-top: 4px;
-                    line-height: 1.3;
-                    white-space: pre-wrap;
-                    font-family: 'Arial', sans-serif;
-                }
-                .ticket .no-devolucion {
-                    font-size: 13px;
-                    font-weight: bold;
-                    color: #d32f2f;
-                    margin: 4px 0;
-                }
+                .ticket .footer { font-size: 9px; color: #888; margin-top: 6px; border-top: 1px dashed #aaa; padding-top: 6px; }
+                .ticket .garantia { text-align: left; font-size: 8px; color: #555; padding: 4px 0; border-top: 1px dashed #ddd; margin-top: 4px; line-height: 1.3; }
+                .ticket .no-devolucion { font-size: 13px; font-weight: bold; color: #d32f2f; margin: 4px 0; }
                 @page { size: 74mm auto; margin: 0; }
                 @media print { body { padding: 3px; } }
             </style>
@@ -751,4 +589,38 @@ Sábado y Domingo: No atendemos garantías
             <div class="ticket">
                 <div class="logo">${logoHtml}</div>
                 <div class="subtitle">🎰 LOTO GAMES POS</div>
-                <
+                <hr>
+                <div class="info-line"><span>📅 Fecha:</span><span>${fecha}</span></div>
+                <div class="info-line"><span>👤 Vendedor:</span><span>${usuario}</span></div>
+                ${descuento ? '<div class="info-line"><span>Descuento:</span><span>5%</span></div>' : ''}
+                <hr>
+                <div class="items"><strong>📦 Productos:</strong>${itemsHtml}</div>
+                <hr>
+                <div class="info-line"><span>💳 Método de pago:</span><span>${metodo}</span></div>
+                <div class="total-grande">TOTAL: $${total.toFixed(2)}</div>
+                ${comentario ? '<div style="font-size:11px; margin-top:4px; color:#555;">📝 ' + comentario + '</div>' : ''}
+                <hr>
+                <div class="no-devolucion">❌ No Hay devoluciones de Efectivo</div>
+                <hr>
+                <div class="garantia"><strong>⚠️ TÉRMINOS DE GARANTÍA</strong><br>• Garantía por reparación: 30 días<br>• No cubre daños por líquidos, golpes o mal uso<br>• Etiqueta de seguridad debe estar intacta<br>• Guarda este ticket como comprobante</div>
+                <hr>
+                <div class="footer">¡Gracias por tu compra!<br>LOTO GAMES - ${new Date().getFullYear()}</div>
+            </div>
+            <script>setTimeout(function() { window.print(); }, 500);<\/script>
+        </body>
+        </html>
+    `);
+    win.document.close();
+};
+
+// ============================================
+// INICIALIZACIÓN
+// ============================================
+
+setTimeout(function() {
+    if (document.getElementById('listaProductosGrid')) {
+        window.cargarProductosVenta();
+    }
+}, 100);
+
+console.log('✅ Módulo de ventas cargado correctamente');
