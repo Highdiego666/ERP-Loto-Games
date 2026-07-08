@@ -696,4 +696,27 @@ window.imprimirTicketVenta = function(ventaData) {
                 <hr>
                 <div class="no-devolucion">❌ No Hay devoluciones de Efectivo</div>
                 <hr>
-                <div class="garantia"><strong>⚠️
+                <div class="garantia"><strong>⚠️ TÉRMINOS DE GARANTÍA</strong><br>• Garantía por reparación: 30 días<br>• No cubre daños por líquidos, golpes o mal uso<br>• Etiqueta de seguridad debe estar intacta<br>• Guarda este ticket como comprobante</div>
+                <hr>
+                <div class="footer">¡Gracias por tu compra!<br>LOTO GAMES - ${new Date().getFullYear()}</div>
+            </div>
+            <script>
+                setTimeout(function() { window.print(); }, 500);
+            <\/script>
+        </body>
+        </html>
+    `);
+    win.document.close();
+};
+
+// ============================================
+// INICIALIZACION
+// ============================================
+
+setTimeout(function() {
+    if (document.getElementById('listaProductosGrid')) {
+        window.cargarProductosVenta();
+    }
+}, 100);
+
+console.log('Modulo de ventas cargado correctamente');
