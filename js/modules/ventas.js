@@ -135,7 +135,7 @@ window.ventasModule = function() {
 
                         ═══════════════════════════════════
                         ¡Gracias por confiar en LOTO GAMES!
-                        📞 (55) 1234-5678
+                        📞  56-12-60-70-98
                         ═══════════════════════════════════
                     </div>
                 </div>
