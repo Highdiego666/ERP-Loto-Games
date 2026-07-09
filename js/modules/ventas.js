@@ -709,6 +709,124 @@ window.imprimirTicketVenta = function(ventaData) {
     win.document.close();
 };
 
+     // ============================================
+// CONFIGURACIÓN DEL ESCÁNER DE CÓDIGOS DE BARRAS
+// ============================================
+
+let scannerBuffer = '';
+let scannerTimeout = null;
+const SCANNER_DELAY = 80;
+
+// Inicializar el escáner
+window.inicializarEscanner = function() {
+    console.log('✅ Escáner inicializado - Listo para escanear');
+    
+    document.addEventListener('keydown', function(e) {
+        // Ignorar si estamos en un input
+        const tagName = e.target.tagName.toLowerCase();
+        if (tagName === 'input' || tagName === 'textarea' || tagName === 'select') {
+            return;
+        }
+
+        // Capturar caracteres del escáner
+        if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+            scannerBuffer += e.key;
+            
+            if (scannerTimeout) {
+                clearTimeout(scannerTimeout);
+            }
+            
+            scannerTimeout = setTimeout(function() {
+                if (scannerBuffer.length > 2) {
+                    window.procesarCodigoEscaneado(scannerBuffer);
+                }
+                scannerBuffer = '';
+                scannerTimeout = null;
+            }, SCANNER_DELAY);
+        }
+        
+        // Si la tecla es Enter y tenemos buffer, procesar inmediatamente
+        if (e.key === 'Enter' && scannerBuffer.length > 0) {
+            e.preventDefault();
+            if (scannerTimeout) {
+                clearTimeout(scannerTimeout);
+                scannerTimeout = null;
+            }
+            window.procesarCodigoEscaneado(scannerBuffer);
+            scannerBuffer = '';
+        }
+    });
+};
+
+// Procesar el código escaneado
+window.procesarCodigoEscaneado = async function(codigo) {
+    console.log('📷 Código escaneado:', codigo);
+    
+    scannerBuffer = '';
+    if (scannerTimeout) {
+        clearTimeout(scannerTimeout);
+        scannerTimeout = null;
+    }
+    
+    codigo = codigo.replace(/[\n\r]/g, '').trim();
+    
+    if (codigo.length < 2) return;
+    
+    try {
+        const productos = await window.DB.getProductos();
+        const producto = productos.find(function(p) {
+            return (p.sku && p.sku.toLowerCase() === codigo.toLowerCase()) || 
+                   (p.codigo_barras && p.codigo_barras === codigo);
+        });
+        
+        if (producto) {
+            console.log('✅ Producto encontrado:', producto.nombre);
+            
+            const resultadoDiv = document.getElementById('resultadoBusqueda');
+            if (resultadoDiv) {
+                resultadoDiv.innerHTML = `
+                    <div style="background: rgba(16, 185, 129, 0.15); padding: 12px; border-radius: 8px; border-left: 4px solid #10b981; margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong style="font-size: 16px;">✅ ${producto.nombre}</strong><br>
+                                <small>SKU: ${producto.sku} | Stock: ${producto.stock}</small>
+                            </div>
+                            <span style="color: #10b981; font-weight: bold;">Agregado al carrito</span>
+                        </div>
+                    </div>
+                `;
+                setTimeout(function() {
+                    if (resultadoDiv) {
+                        resultadoDiv.innerHTML = '';
+                    }
+                }, 3000);
+            }
+            
+            await window.agregarAlCarrito(producto.id);
+            
+        } else {
+            console.log('❌ Producto no encontrado:', codigo);
+            
+            const resultadoDiv = document.getElementById('resultadoBusqueda');
+            if (resultadoDiv) {
+                resultadoDiv.innerHTML = `
+                    <div style="background: rgba(239, 68, 68, 0.15); padding: 12px; border-radius: 8px; border-left: 4px solid #ef4444; color: #ef4444; margin-bottom: 10px;">
+                        <strong>❌ Producto no encontrado</strong><br>
+                        <small>Código: ${codigo}</small>
+                    </div>
+                `;
+                setTimeout(function() {
+                    if (resultadoDiv) {
+                        resultadoDiv.innerHTML = '';
+                    }
+                }, 4000);
+            }
+        }
+    } catch (error) {
+        console.error('Error procesando escaneo:', error);
+    }
+};
+
 // ============================================
 // INICIALIZACION
 // ============================================
