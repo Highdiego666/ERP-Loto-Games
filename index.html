@@ -7,6 +7,7 @@
   <meta name="author" content="LOTO GAMES">
   <meta name="theme-color" content="#050914">
   <meta name="color-scheme" content="dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://vreznzasckljieptvqas.supabase.co wss://vreznzasckljieptvqas.supabase.co https://api.github.com; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com; img-src 'self' data: blob:;">
   <title>Loto Games · ERP / POS</title>
 
   <link rel="icon" type="image/svg+xml" href="assets/img/loto-games-logo.svg">
@@ -30,7 +31,7 @@
     <aside class="sidebar">
       <div class="logo-area">
         <img src="assets/img/loto-games-logo.svg" class="brand-logo-sidebar" alt="Loto Games">
-        <span class="app-version">ERP · POS V1</span>
+        <span class="app-version">ERP · POS V1.1</span>
       </div>
       <nav class="nav-menu">
         <a href="#" data-module="dashboard" class="nav-item active"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>
@@ -72,6 +73,7 @@
   <script src="js/utils/database-sales-v3.js"></script>
   <script src="js/utils/compat-v2.js"></script>
   <script src="js/utils/auth-v2.js"></script>
+  <script src="js/desktop-runtime.js"></script>
 
   <!-- Módulos que se conservan sin handlers duplicados -->
   <script src="js/modules/dashboard.js"></script>
@@ -96,7 +98,7 @@
   <script src="js/keyboard-v4.js"></script>
 
   <script>
-    window.LOTO_VERSION = '1.0.0';
+    window.LOTO_VERSION = '1.1.0';
     setTimeout(() => {
       const modules = {
         dashboard:typeof window.dashboardModule, ventas:typeof window.ventasModule,
@@ -108,7 +110,7 @@
       };
       const missing=Object.entries(modules).filter(([,v])=>v!=='function').map(([k])=>k);
       if(missing.length) console.warn('⚠️ Módulos faltantes:',missing);
-      else console.log('✅ LOTO GAMES ERP / POS V1 listo',modules);
+      else console.log('✅ LOTO GAMES ERP / POS V1.1 listo',modules);
     },1000);
   </script>
 </body>
