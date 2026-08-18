@@ -9,6 +9,12 @@
   const ITERATIONS = 160000;
   const encoder = new TextEncoder();
 
+  // Mantener la sesión de DEMO separada de la sesión normal.
+  // Así una sesión previa del POS no puede saltarse el login al abrir ?demo=1.
+  function sessionKey() {
+    return window.LOTO_DEMO_MODE ? 'loto_demo_session_v2' : 'loto_session';
+  }
+
   function bytesToBase64(bytes) {
     let binary = '';
     bytes.forEach(b => { binary += String.fromCharCode(b); });
@@ -48,7 +54,6 @@
     if (!secret || !hash || !salt) return false;
     const candidate = await derive(secret, salt);
     if (candidate.length !== hash.length) return false;
-    // Comparación constante simple para evitar salir al primer carácter diferente.
     let diff = 0;
     for (let i = 0; i < candidate.length; i++) {
       diff |= candidate.charCodeAt(i) ^ hash.charCodeAt(i);
@@ -58,7 +63,6 @@
 
   function normalizePrivileges(value) {
     if (!Array.isArray(value)) return [];
-    // Compatibilidad con la versión antigua, que guardaba objetos {id, activo}.
     return value
       .filter(v => typeof v === 'string' || (v && v.activo !== false))
       .map(v => typeof v === 'string' ? v : v.id)
@@ -91,7 +95,6 @@
       if (user.password_hash && user.password_salt) {
         return verifyCredential(password, user.password_hash, user.password_salt);
       }
-      // Migración controlada de usuarios de base de datos antiguos.
       if (user.password && user.password === password) {
         const cred = await this.createPassword(password);
         await window.DB.updateUsuario(user.id, cred);
@@ -122,14 +125,14 @@
         version: 2,
         timestamp: Date.now()
       };
-      localStorage.setItem('loto_session', JSON.stringify(session));
+      localStorage.setItem(sessionKey(), JSON.stringify(session));
       window.usuarioActual = session;
       return session;
     },
 
     getSession() {
       try {
-        const raw = localStorage.getItem('loto_session');
+        const raw = localStorage.getItem(sessionKey());
         if (!raw) return null;
         const session = JSON.parse(raw);
         if (!session.loggedIn || session.version !== 2) return null;
@@ -141,10 +144,10 @@
     },
 
     clearSession() {
-      localStorage.removeItem('loto_session');
+      localStorage.removeItem(sessionKey());
       window.usuarioActual = null;
     }
   };
 
-  console.log('✅ Auth V2 cargado');
+  console.log(`✅ Auth V2 cargado (${window.LOTO_DEMO_MODE ? 'sesión DEMO aislada' : 'sesión normal'})`);
 })();
