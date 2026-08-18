@@ -1,6 +1,6 @@
 // ============================================
 // LOTO GAMES POS - CONEXIÓN SUPABASE
-// ?demo=1 desactiva la nube y usa únicamente localStorage
+// ?demo=1 desactiva la nube y usa únicamente almacenamiento local
 // ============================================
 
 const SUPABASE_URL = "https://vreznzasckljieptvqas.supabase.co";
@@ -11,8 +11,11 @@ window.LOTO_DEMO_MODE = DEMO_MODE;
 
 if (DEMO_MODE) {
   window.supabase = null;
-  console.warn('🧪 MODO DEMO: Supabase desactivado. Los datos permanecen sólo en este navegador.');
-} else {
-  window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  console.warn('🧪 MODO DEMO: Supabase desactivado. Los datos permanecen sólo en este equipo/navegador.');
+} else if (typeof globalThis.supabase !== 'undefined' && typeof globalThis.supabase.createClient === 'function') {
+  window.supabase = globalThis.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   console.log('✅ Supabase conectado correctamente');
+} else {
+  window.supabase = null;
+  console.warn('⚠️ SDK de Supabase no disponible. Se iniciará con la copia local y se mantendrá en modo consulta hasta recuperar conexión.');
 }
