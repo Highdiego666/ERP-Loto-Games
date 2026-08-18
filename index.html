@@ -1,253 +1,116 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <meta name="description" content="LOTO GAMES POS - Sistema de punto de venta profesional para tienda de videojuegos">
-    <meta name="author" content="LOTO GAMES">
-    <title>LOTO GAMES POS - Sistema Profesional</title>
-    
-    <!-- Font Awesome 6 -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Chart.js para gráficos -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    
-    <!-- JsBarcode para códigos de barras -->
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
-    
-    <!-- Estilos principales -->
-    <link rel="stylesheet" href="css/style.css">
-    
-    <style>
-        /* Estilos de respaldo para el login y el teclado */
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: var(--text-muted);
-        }
-        .error-module {
-            background: var(--bg-card);
-            border-radius: 16px;
-            padding: 40px;
-            text-align: center;
-            border: 1px solid var(--border);
-        }
-        .error-module i {
-            font-size: 48px;
-            color: var(--danger);
-            margin-bottom: 20px;
-        }
-        
-        /* Estilos del teclado (respaldo) */
-        .pin-btn {
-            background: #1e293b;
-            border: 1px solid #334155;
-            border-radius: 16px;
-            padding: 20px;
-            font-size: 28px;
-            font-weight: bold;
-            color: white;
-            cursor: pointer;
-            min-width: 80px;
-            transition: all 0.2s;
-        }
-        .pin-btn:hover {
-            background: #334155;
-        }
-        .pin-btn[data-num="clear"] {
-            background: #f59e0b;
-        }
-        .pin-btn[data-num="enter"] {
-            background: #10b981;
-        }
-        #loginRoot {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 999999;
-            background: #0f172a;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+  <meta name="description" content="LOTO GAMES POS - Sistema de punto de venta profesional para tienda de videojuegos">
+  <meta name="author" content="LOTO GAMES">
+  <title>LOTO GAMES POS - Sistema Profesional</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <link rel="stylesheet" href="css/style.css">
+
+  <style>
+    .loading { text-align:center; padding:40px; color:var(--text-muted); }
+    .error-module { background:var(--bg-card); border-radius:16px; padding:40px; text-align:center; border:1px solid var(--border); }
+    #loginRoot { position:fixed; inset:0; z-index:999999; }
+    @media (max-width: 1000px) {
+      #content > div[style*="grid-template-columns:minmax(0,1fr) 370px"] { grid-template-columns:1fr !important; }
+    }
+  </style>
 </head>
 <body>
-    <div class="app-container">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="logo-area">
-                <div class="logo-icon">
-                    <i class="fas fa-gamepad"></i>
-                </div>
-                <div class="logo-text">
-                    <span class="logo-title">LOTO GAMES</span>
-                    <span class="logo-subtitle">POS System</span>
-                </div>
-            </div>
-            
-            <nav class="nav-menu">
-                <a href="#" data-module="dashboard" class="nav-item active">
-                    <i class="fas fa-tachometer-alt"></i>
-                    <span>Dashboard</span>
-                </a>
-                <a href="#" data-module="ventas" class="nav-item">
-                    <i class="fas fa-shopping-cart"></i>
-                    <span>Punto de Venta</span>
-                </a>
-                <a href="#" data-module="productos" class="nav-item">
-                    <i class="fas fa-boxes"></i>
-                    <span>Productos</span>
-                </a>
-                <a href="#" data-module="inventario" class="nav-item">
-                    <i class="fas fa-clipboard-list"></i>
-                    <span>Inventario</span>
-                </a>
-                <a href="#" data-module="servicios" class="nav-item">
-                    <i class="fas fa-tools"></i>
-                    <span>Servicio Técnico</span>
-                </a>
-                <a href="#" data-module="clientes" class="nav-item">
-                    <i class="fas fa-users"></i>
-                    <span>Clientes</span>
-                </a>
-                <a href="#" data-module="usuarios" class="nav-item">
-                    <i class="fas fa-user-shield"></i>
-                    <span>Usuarios</span>
-                </a>
-                <a href="#" data-module="reportes" class="nav-item">
-                    <i class="fas fa-chart-line"></i>
-                    <span>Reportes</span>
-                </a>
-                <a href="#" data-module="traspasos" class="nav-item">
-                    <i class="fas fa-exchange-alt"></i>
-                    <span>Traspasos</span>
-                </a>
-                <!-- ✅ NUEVO: Botón Corte de Caja -->
-                <a href="#" data-module="corte" class="nav-item" style="border-top: 1px solid var(--border); margin-top: 8px; padding-top: 12px;">
-                    <i class="fas fa-cash-register" style="color: #10b981;"></i>
-                    <span style="color: #10b981; font-weight: 600;">Corte de Caja</span>
-                </a>
-            </nav>
-            
-            <div class="sidebar-footer">
-                <div class="user-info-sidebar">
-                    <i class="fas fa-user-circle"></i>
-                    <div>
-                        <div class="user-name" id="userNameSidebar">Usuario</div>
-                        <div class="user-role" id="userRoleSidebar">Rol</div>
-                    </div>
-                </div>
-            </div>
-        </aside>
-        
-        <!-- Main Content -->
-        <main class="main-content">
-            <header class="top-bar">
-                <div class="page-title">
-                    <h1 id="pageTitle">Dashboard</h1>
-                    <p id="pageDescription">Visión general del negocio</p>
-                </div>
-                <div class="top-bar-actions">
-                    <div class="date-time">
-                        <i class="far fa-calendar-alt"></i>
-                        <span id="currentDate"></span>
-                    </div>
-                    <div class="notifications">
-                        <i class="far fa-bell"></i>
-                        <span class="badge" id="notificationBadge">0</span>
-                    </div>
-                </div>
-            </header>
-            
-            <div id="content" class="content-area">
-                <div class="loading">
-                    <i class="fas fa-spinner fa-pulse fa-2x"></i>
-                    <p>Cargando sistema...</p>
-                </div>
-            </div>
-        </main>
-    </div>
-    
-    <!-- ============================================ -->
-    <!-- SUPABASE - BASE DE DATOS EN LA NUBE          -->
-    <!-- ============================================ -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/supabase-client.js"></script>
-    
-    <!-- ============================================ -->
-    <!-- BASE DE DATOS Y UTILERÍAS                    -->
-    <!-- ============================================ -->
-    <script src="js/utils/database.js"></script>
-    
-    <!-- ============================================ -->
-    <!-- MÓDULO DE LOGIN                              -->
-    <!-- ============================================ -->
-    <script src="js/modules/login2.js"></script>
-    
-    <!-- ============================================ -->
-    <!-- MÓDULOS DEL SISTEMA                          -->
-    <!-- ============================================ -->
-    <script src="js/modules/dashboard.js"></script>
-    <script src="js/modules/ventas.js"></script>
-    <script src="js/modules/productos.js"></script>
-    <script src="js/modules/inventario.js"></script>
-    <script src="js/modules/servicios.js"></script>
-    <script src="js/modules/clientes.js"></script>
-    <script src="js/modules/usuarios.js"></script>
-    <script src="js/modules/reportes.js"></script>
-    <script src="js/modules/traspasos.js"></script>
-    <!-- ✅ NUEVO: Módulo de Corte de Caja -->
-    <script src="js/modules/corte.js"></script>
-    
-    <!-- ============================================ -->
-    <!-- APLICACIÓN PRINCIPAL                         -->
-    <!-- ============================================ -->
-    <script src="js/app.js"></script>
-    
-    <!-- ============================================ -->
-    <!-- VERIFICACIÓN DE CARGA                        -->
-    <!-- ============================================ -->
-    <script>
-        (function verificarCarga() {
-            const startTime = Date.now();
-            
-            function checkModules() {
-                const modules = {
-                    'dashboard': typeof window.dashboardModule,
-                    'ventas': typeof window.ventasModule,
-                    'productos': typeof window.productosModule,
-                    'inventario': typeof window.inventarioModule,
-                    'servicios': typeof window.serviciosModule,
-                    'clientes': typeof window.clientesModule,
-                    'usuarios': typeof window.usuariosModule,
-                    'reportes': typeof window.reportesModule,
-                    'traspasos': typeof window.traspasosModule,
-                    'corte': typeof window.corteModule,
-                    'login': typeof window.loginModule
-                };
-                
-                const allLoaded = Object.values(modules).every(t => t === 'function');
-                const elapsed = Date.now() - startTime;
-                
-                if (allLoaded) {
-                    console.log('✅ Todos los módulos cargados en', elapsed, 'ms');
-                    console.log('📦 Módulos:', modules);
-                } else {
-                    const missing = Object.entries(modules).filter(([k, v]) => v !== 'function').map(([k]) => k);
-                    console.warn('⚠️ Módulos faltantes:', missing);
-                    setTimeout(checkModules, 500);
-                }
-            }
-            
-            setTimeout(checkModules, 1000);
-        })();
-    </script>
+  <div class="app-container">
+    <aside class="sidebar">
+      <div class="logo-area">
+        <div class="logo-icon"><i class="fas fa-gamepad"></i></div>
+        <div class="logo-text"><span class="logo-title">LOTO GAMES</span><span class="logo-subtitle">POS System</span></div>
+      </div>
+
+      <nav class="nav-menu">
+        <a href="#" data-module="dashboard" class="nav-item active"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>
+        <a href="#" data-module="ventas" class="nav-item"><i class="fas fa-shopping-cart"></i><span>Punto de Venta</span></a>
+        <a href="#" data-module="productos" class="nav-item"><i class="fas fa-boxes"></i><span>Productos</span></a>
+        <a href="#" data-module="inventario" class="nav-item"><i class="fas fa-clipboard-list"></i><span>Inventario</span></a>
+        <a href="#" data-module="servicios" class="nav-item"><i class="fas fa-tools"></i><span>Servicio Técnico</span></a>
+        <a href="#" data-module="clientes" class="nav-item"><i class="fas fa-users"></i><span>Clientes</span></a>
+        <a href="#" data-module="usuarios" class="nav-item"><i class="fas fa-user-shield"></i><span>Usuarios</span></a>
+        <a href="#" data-module="reportes" class="nav-item"><i class="fas fa-chart-line"></i><span>Reportes</span></a>
+        <a href="#" data-module="traspasos" class="nav-item"><i class="fas fa-exchange-alt"></i><span>Traspasos</span></a>
+        <a href="#" data-module="corte" class="nav-item" style="border-top:1px solid var(--border);margin-top:8px;padding-top:12px;"><i class="fas fa-cash-register" style="color:#10b981;"></i><span style="color:#10b981;font-weight:600;">Corte de Caja</span></a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-info-sidebar"><i class="fas fa-user-circle"></i><div><div class="user-name" id="userNameSidebar">Usuario</div><div class="user-role" id="userRoleSidebar">Rol</div></div></div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="top-bar">
+        <div class="page-title"><h1 id="pageTitle">Dashboard</h1><p id="pageDescription">Visión general del negocio</p></div>
+        <div class="top-bar-actions">
+          <div class="date-time"><i class="far fa-calendar-alt"></i><span id="currentDate"></span></div>
+          <div class="notifications"><i class="far fa-bell"></i><span class="badge" id="notificationBadge">0</span></div>
+        </div>
+      </header>
+      <div id="content" class="content-area"><div class="loading"><i class="fas fa-spinner fa-pulse fa-2x"></i><p>Cargando sistema...</p></div></div>
+    </main>
+  </div>
+
+  <!-- Base -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/utils/database.js"></script>
+  <script src="js/utils/database-v2.js"></script>
+  <script src="js/utils/auth-v2.js"></script>
+
+  <!-- Módulos originales conservados como base/compatibilidad -->
+  <script src="js/modules/dashboard.js"></script>
+  <script src="js/modules/ventas.js"></script>
+  <script src="js/modules/productos.js"></script>
+  <script src="js/modules/inventario.js"></script>
+  <script src="js/modules/servicios.js"></script>
+  <script src="js/modules/clientes.js"></script>
+  <script src="js/modules/usuarios.js"></script>
+  <script src="js/modules/reportes.js"></script>
+  <script src="js/modules/traspasos.js"></script>
+  <script src="js/modules/corte.js"></script>
+
+  <!-- V2: sobreescribe únicamente los componentes finalizados -->
+  <script src="js/modules/login-v2.js"></script>
+  <script src="js/modules/productos-v2.js"></script>
+  <script src="js/modules/ventas-v2.js"></script>
+  <script src="js/modules/clientes-v2.js"></script>
+  <script src="js/modules/usuarios-v2.js"></script>
+  <script src="js/modules/traspasos-v2.js"></script>
+  <script src="js/modules/reportes-v2.js"></script>
+
+  <!-- Aplicación V2. app.js antiguo se conserva en el repo, pero ya no se ejecuta. -->
+  <script src="js/app-v2.js"></script>
+  <script src="js/keyboard-v2.js"></script>
+
+  <script>
+    setTimeout(() => {
+      const modules = {
+        dashboard: typeof window.dashboardModule,
+        ventas: typeof window.ventasModule,
+        productos: typeof window.productosModule,
+        inventario: typeof window.inventarioModule,
+        servicios: typeof window.serviciosModule,
+        clientes: typeof window.clientesModule,
+        usuarios: typeof window.usuariosModule,
+        reportes: typeof window.reportesModule,
+        traspasos: typeof window.traspasosModule,
+        corte: typeof window.corteModule,
+        login: typeof window.loginModule
+      };
+      const missing = Object.entries(modules).filter(([,v]) => v !== 'function').map(([k]) => k);
+      if (missing.length) console.warn('⚠️ Módulos faltantes:', missing);
+      else console.log('✅ LOTO GAMES POS V2 listo', modules);
+    }, 1000);
+  </script>
 </body>
 </html>
