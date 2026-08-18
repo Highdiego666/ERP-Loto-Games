@@ -17,7 +17,7 @@
     .loading { text-align:center; padding:40px; color:var(--text-muted); }
     .error-module { background:var(--bg-card); border-radius:16px; padding:40px; text-align:center; border:1px solid var(--border); }
     #loginRoot { position:fixed; inset:0; z-index:999999; }
-    @media (max-width: 1000px) {
+    @media (max-width:1000px) {
       #content > div[style*="grid-template-columns:minmax(0,1fr) 370px"] { grid-template-columns:1fr !important; }
     }
   </style>
@@ -25,11 +25,7 @@
 <body>
   <div class="app-container">
     <aside class="sidebar">
-      <div class="logo-area">
-        <div class="logo-icon"><i class="fas fa-gamepad"></i></div>
-        <div class="logo-text"><span class="logo-title">LOTO GAMES</span><span class="logo-subtitle">POS System</span></div>
-      </div>
-
+      <div class="logo-area"><div class="logo-icon"><i class="fas fa-gamepad"></i></div><div class="logo-text"><span class="logo-title">LOTO GAMES</span><span class="logo-subtitle">POS System</span></div></div>
       <nav class="nav-menu">
         <a href="#" data-module="dashboard" class="nav-item active"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>
         <a href="#" data-module="ventas" class="nav-item"><i class="fas fa-shopping-cart"></i><span>Punto de Venta</span></a>
@@ -42,75 +38,58 @@
         <a href="#" data-module="traspasos" class="nav-item"><i class="fas fa-exchange-alt"></i><span>Traspasos</span></a>
         <a href="#" data-module="corte" class="nav-item" style="border-top:1px solid var(--border);margin-top:8px;padding-top:12px;"><i class="fas fa-cash-register" style="color:#10b981;"></i><span style="color:#10b981;font-weight:600;">Corte de Caja</span></a>
       </nav>
-
-      <div class="sidebar-footer">
-        <div class="user-info-sidebar"><i class="fas fa-user-circle"></i><div><div class="user-name" id="userNameSidebar">Usuario</div><div class="user-role" id="userRoleSidebar">Rol</div></div></div>
-      </div>
+      <div class="sidebar-footer"><div class="user-info-sidebar"><i class="fas fa-user-circle"></i><div><div class="user-name" id="userNameSidebar">Usuario</div><div class="user-role" id="userRoleSidebar">Rol</div></div></div></div>
     </aside>
 
     <main class="main-content">
-      <header class="top-bar">
-        <div class="page-title"><h1 id="pageTitle">Dashboard</h1><p id="pageDescription">Visión general del negocio</p></div>
-        <div class="top-bar-actions">
-          <div class="date-time"><i class="far fa-calendar-alt"></i><span id="currentDate"></span></div>
-          <div class="notifications"><i class="far fa-bell"></i><span class="badge" id="notificationBadge">0</span></div>
-        </div>
-      </header>
+      <header class="top-bar"><div class="page-title"><h1 id="pageTitle">Dashboard</h1><p id="pageDescription">Visión general del negocio</p></div><div class="top-bar-actions"><div class="date-time"><i class="far fa-calendar-alt"></i><span id="currentDate"></span></div><div class="notifications"><i class="far fa-bell"></i><span class="badge" id="notificationBadge">0</span></div></div></header>
       <div id="content" class="content-area"><div class="loading"><i class="fas fa-spinner fa-pulse fa-2x"></i><p>Cargando sistema...</p></div></div>
     </main>
   </div>
 
-  <!-- Base -->
+  <!-- Datos -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabase-client.js"></script>
   <script src="js/utils/database.js"></script>
   <script src="js/utils/database-v2.js"></script>
+  <script src="js/utils/compat-v2.js"></script>
   <script src="js/utils/auth-v2.js"></script>
 
-  <!-- Módulos originales conservados como base/compatibilidad -->
+  <!-- Módulos que se conservan sin handlers duplicados -->
   <script src="js/modules/dashboard.js"></script>
-  <script src="js/modules/ventas.js"></script>
-  <script src="js/modules/productos.js"></script>
+  <script src="js/modules/ventas.js"></script><!-- sólo se conserva la impresión de ticket y compatibilidad -->
   <script src="js/modules/inventario.js"></script>
   <script src="js/modules/servicios.js"></script>
-  <script src="js/modules/clientes.js"></script>
-  <script src="js/modules/usuarios.js"></script>
-  <script src="js/modules/reportes.js"></script>
-  <script src="js/modules/traspasos.js"></script>
+  <script src="js/modules/reportes.js"></script><!-- funciones de corte/ventas/servicios reutilizadas por reportes-v2 -->
   <script src="js/modules/corte.js"></script>
 
-  <!-- V2: sobreescribe únicamente los componentes finalizados -->
+  <!-- Módulos finalizados -->
   <script src="js/modules/login-v2.js"></script>
   <script src="js/modules/productos-v2.js"></script>
+  <script src="js/modules/productos-label-v2.js"></script>
   <script src="js/modules/ventas-v2.js"></script>
   <script src="js/modules/clientes-v2.js"></script>
   <script src="js/modules/usuarios-v2.js"></script>
   <script src="js/modules/traspasos-v2.js"></script>
   <script src="js/modules/reportes-v2.js"></script>
 
-  <!-- Aplicación V2. app.js antiguo se conserva en el repo, pero ya no se ejecuta. -->
   <script src="js/app-v2.js"></script>
   <script src="js/keyboard-v2.js"></script>
 
   <script>
     setTimeout(() => {
       const modules = {
-        dashboard: typeof window.dashboardModule,
-        ventas: typeof window.ventasModule,
-        productos: typeof window.productosModule,
-        inventario: typeof window.inventarioModule,
-        servicios: typeof window.serviciosModule,
-        clientes: typeof window.clientesModule,
-        usuarios: typeof window.usuariosModule,
-        reportes: typeof window.reportesModule,
-        traspasos: typeof window.traspasosModule,
-        corte: typeof window.corteModule,
-        login: typeof window.loginModule
+        dashboard:typeof window.dashboardModule, ventas:typeof window.ventasModule,
+        productos:typeof window.productosModule, inventario:typeof window.inventarioModule,
+        servicios:typeof window.serviciosModule, clientes:typeof window.clientesModule,
+        usuarios:typeof window.usuariosModule, reportes:typeof window.reportesModule,
+        traspasos:typeof window.traspasosModule, corte:typeof window.corteModule,
+        login:typeof window.loginModule
       };
-      const missing = Object.entries(modules).filter(([,v]) => v !== 'function').map(([k]) => k);
-      if (missing.length) console.warn('⚠️ Módulos faltantes:', missing);
-      else console.log('✅ LOTO GAMES POS V2 listo', modules);
-    }, 1000);
+      const missing=Object.entries(modules).filter(([,v])=>v!=='function').map(([k])=>k);
+      if(missing.length) console.warn('⚠️ Módulos faltantes:',missing);
+      else console.log('✅ LOTO GAMES POS V2 listo',modules);
+    },1000);
   </script>
 </body>
 </html>
