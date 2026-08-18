@@ -52,6 +52,56 @@
     if (main) main.style.display = visible ? 'flex' : 'none';
   }
 
+  function pintarEstadoDB(tipo, texto, detalle = '') {
+    const className = {
+      ok: 'db-status-ok',
+      error: 'db-status-error',
+      demo: 'db-status-demo',
+      checking: 'db-status-checking'
+    }[tipo] || 'db-status-checking';
+
+    [document.getElementById('dbStatusSidebar'), document.getElementById('dbStatusTop')]
+      .filter(Boolean)
+      .forEach(el => {
+        el.className = `db-status ${className}`;
+        el.innerHTML = `<span class="db-dot"></span><span>${texto}</span>`;
+        if (detalle) el.title = detalle;
+      });
+  }
+
+  async function actualizarEstadoDB() {
+    if (window.LOTO_DEMO_MODE || !window.supabase) {
+      pintarEstadoDB('demo', 'Modo local', 'Supabase no está activo en esta sesión.');
+      return { ok: false, modo: 'demo/local' };
+    }
+
+    pintarEstadoDB('checking', 'Verificando…');
+    try {
+      if (typeof window.DB?.verificarConexionFinal === 'function') {
+        const estado = await window.DB.verificarConexionFinal();
+        if (estado?.ok) {
+          pintarEstadoDB('ok', 'Supabase OK', 'Esquema V1 verificado.');
+        } else {
+          const errores = Object.entries(estado?.tablas || {})
+            .filter(([, valor]) => !valor?.ok)
+            .map(([tabla, valor]) => `${tabla}: ${valor?.error || 'error'}`)
+            .join(' · ');
+          pintarEstadoDB('error', 'Base incompleta', errores || estado?.mensaje || 'Error de esquema');
+        }
+        return estado;
+      }
+
+      const { error } = await window.supabase.from('productos').select('id').limit(1);
+      if (error) throw error;
+      pintarEstadoDB('ok', 'Supabase OK');
+      return { ok: true };
+    } catch (error) {
+      console.error('❌ Verificación Supabase:', error);
+      pintarEstadoDB('error', 'Supabase error', error.message || String(error));
+      return { ok: false, error };
+    }
+  }
+
   async function mostrarLogin() {
     setShellVisible(false);
     document.getElementById('loginRoot')?.remove();
@@ -136,6 +186,7 @@
     if (userName) userName.textContent = usuario.nombre || 'Usuario';
     if (userRole) userRole.textContent = usuario.rol || '';
     construirMenu(usuario);
+    await actualizarEstadoDB();
 
     const accesos = obtenerModulosAcceso(usuario);
     const inicial = accesos.includes('ventas') && usuario.rol === 'vendedor'
@@ -148,6 +199,7 @@
   window.getCurrentModule = () => currentModule;
   window.getUsuarioActual = () => usuarioActual;
   window.getModulosAcceso = () => obtenerModulosAcceso(usuarioActual);
+  window.verificarEstadoDB = actualizarEstadoDB;
 
   window.cerrarSesion = () => {
     if (!confirm('¿Cerrar sesión?')) return;
@@ -191,5 +243,5 @@
     else await mostrarLogin();
   });
 
-  console.log('✅ App V2 cargado: shell persistente + permisos + sesiones V2');
+  console.log('✅ App V2 cargado: shell persistente + permisos + diagnóstico V1');
 })();
