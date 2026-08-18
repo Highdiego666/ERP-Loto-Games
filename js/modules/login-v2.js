@@ -10,12 +10,12 @@
   let loginMode = 'password';
 
   window.loginModule = () => `
-    <div id="loginRoot" style="position:fixed;inset:0;background:linear-gradient(135deg,#0f172a,#1e293b);display:flex;justify-content:center;align-items:center;z-index:999999;padding:20px;">
-      <div style="background:#1e293b;width:460px;max-width:100%;border:1px solid #334155;border-radius:24px;padding:28px;box-shadow:0 25px 60px rgba(0,0,0,.45);color:#f8fafc;">
-        <div style="text-align:center;margin-bottom:18px;">
-          <div style="width:64px;height:64px;margin:0 auto 12px;border-radius:18px;background:linear-gradient(135deg,#6366f1,#ec4899);display:flex;align-items:center;justify-content:center;font-size:30px;">🎮</div>
-          <h2 style="margin:0;">LOTO GAMES POS</h2>
-          <p style="color:#94a3b8;margin:6px 0 0;">Acceso al sistema</p>
+    <div id="loginRoot" style="position:fixed;inset:0;background:radial-gradient(circle at 18% 12%,rgba(31,99,255,.20),transparent 30%),radial-gradient(circle at 82% 82%,rgba(239,43,36,.14),transparent 30%),linear-gradient(135deg,#030711,#0b1020 58%,#111a2c);display:flex;justify-content:center;align-items:center;z-index:999999;padding:20px;">
+      <div style="background:rgba(20,29,49,.96);width:460px;max-width:100%;border:1px solid #263551;border-radius:24px;padding:28px;box-shadow:0 25px 70px rgba(0,0,0,.55);color:#f8fafc;backdrop-filter:blur(12px);">
+        <div style="text-align:center;margin-bottom:20px;">
+          <img src="assets/img/loto-games-logo.svg" alt="Loto Games" style="display:block;width:290px;max-width:88%;height:138px;object-fit:contain;margin:0 auto 4px;filter:drop-shadow(0 12px 20px rgba(0,0,0,.45));">
+          <div style="display:inline-flex;align-items:center;gap:7px;padding:5px 10px;border:1px solid #334766;border-radius:999px;background:rgba(255,255,255,.03);font-size:10px;font-weight:800;letter-spacing:.16em;color:#9fb0c9;text-transform:uppercase;">ERP · POS V1</div>
+          <p style="color:#94a3b8;margin:9px 0 0;">Acceso al sistema</p>
         </div>
 
         <div id="loginBootstrap" style="display:none;"></div>
@@ -23,7 +23,7 @@
         <div id="loginNormal">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px;">
             <button id="tabPassword" type="button" class="btn btn-primary" onclick="window.cambiarModoLoginV2('password')">🔐 Contraseña</button>
-            <button id="tabPin" type="button" class="btn" style="background:#334155;color:white;" onclick="window.cambiarModoLoginV2('pin')">⚡ PIN rápido</button>
+            <button id="tabPin" type="button" class="btn" style="background:#263551;color:white;" onclick="window.cambiarModoLoginV2('pin')">⚡ PIN rápido</button>
           </div>
 
           <form id="formLoginPassword" autocomplete="on">
@@ -39,12 +39,13 @@
           </form>
 
           <div id="loginPinPanel" style="display:none;">
-            <div id="pinDisplay" style="background:#0f172a;border:2px solid #334155;border-radius:14px;padding:16px;text-align:center;font:700 38px monospace;letter-spacing:12px;color:#818cf8;margin-bottom:14px;">••••</div>
+            <div id="pinDisplay" style="background:#070b14;border:2px solid #263551;border-radius:14px;padding:16px;text-align:center;font:700 38px monospace;letter-spacing:12px;color:#66a5ff;margin-bottom:14px;">••••</div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
               ${['1','2','3','4','5','6','7','8','9','clear','0','enter'].map(v => {
                 const label = v === 'clear' ? '⌫' : v === 'enter' ? '✓' : v;
-                const bg = v === 'clear' ? '#f59e0b' : v === 'enter' ? '#10b981' : '#334155';
-                return `<button type="button" class="pin-btn-v2" data-num="${v}" style="border:0;border-radius:12px;padding:14px;background:${bg};color:white;font-size:20px;font-weight:700;cursor:pointer;">${label}</button>`;
+                const bg = v === 'clear' ? '#f5b91b' : v === 'enter' ? '#10b981' : '#263551';
+                const color = v === 'clear' ? '#111827' : 'white';
+                return `<button type="button" class="pin-btn-v2" data-num="${v}" style="border:0;border-radius:12px;padding:14px;background:${bg};color:${color};font-size:20px;font-weight:700;cursor:pointer;">${label}</button>`;
               }).join('')}
             </div>
             <small style="display:block;text-align:center;color:#94a3b8;margin-top:10px;">También puedes escribir el PIN con el teclado físico y presionar Enter.</small>
@@ -114,8 +115,8 @@
     if (!form || !pin) return;
     form.style.display = mode === 'password' ? 'block' : 'none';
     pin.style.display = mode === 'pin' ? 'block' : 'none';
-    tabPassword.style.background = mode === 'password' ? 'var(--primary,#6366f1)' : '#334155';
-    tabPin.style.background = mode === 'pin' ? 'var(--primary,#6366f1)' : '#334155';
+    tabPassword.style.background = mode === 'password' ? 'var(--primary,#1f63ff)' : '#263551';
+    tabPin.style.background = mode === 'pin' ? 'var(--primary,#1f63ff)' : '#263551';
     if (mode === 'password') setTimeout(() => document.getElementById('loginEmail')?.focus(), 0);
   };
 
@@ -126,7 +127,7 @@
     normal.style.display = 'none';
     bootstrap.style.display = 'block';
     bootstrap.innerHTML = `
-      <div style="padding:12px;background:rgba(245,158,11,.12);border:1px solid #f59e0b;border-radius:12px;margin-bottom:16px;">
+      <div style="padding:12px;background:rgba(245,185,27,.12);border:1px solid #f5b91b;border-radius:12px;margin-bottom:16px;">
         <strong>Configuración inicial</strong><br>
         <small>No existen usuarios en la base de datos. Crea el administrador principal.</small>
       </div>
