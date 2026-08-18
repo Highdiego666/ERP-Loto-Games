@@ -52,6 +52,7 @@
   <script src="js/supabase-client.js"></script>
   <script src="js/utils/database.js"></script>
   <script src="js/utils/database-v2.js"></script>
+  <script src="js/utils/database-pricing-v4.js"></script>
   <script src="js/utils/database-sales-v3.js"></script>
   <script src="js/utils/compat-v2.js"></script>
   <script src="js/utils/auth-v2.js"></script>
@@ -66,8 +67,9 @@
   <!-- Módulos finalizados -->
   <script src="js/modules/login-v2.js"></script>
   <script src="js/modules/productos-v2.js"></script>
+  <script src="js/modules/productos-markup-v3.js"></script>
   <script src="js/modules/productos-label-v2.js"></script>
-  <script src="js/modules/ventas-v4.js"></script>
+  <script src="js/modules/ventas-v5.js"></script>
   <script src="js/modules/clientes-v2.js"></script>
   <script src="js/modules/usuarios-v2.js"></script>
   <script src="js/modules/traspasos-v2.js"></script>
@@ -89,7 +91,7 @@
       };
       const missing=Object.entries(modules).filter(([,v])=>v!=='function').map(([k])=>k);
       if(missing.length) console.warn('⚠️ Módulos faltantes:',missing);
-      else console.log('✅ LOTO GAMES POS V4 listo',modules);
+      else console.log('✅ LOTO GAMES POS V5 listo',modules);
     },1000);
   </script>
 </body>
