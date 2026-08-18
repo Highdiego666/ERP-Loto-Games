@@ -1,0 +1,75 @@
+{
+  "name": "loto-games-pos",
+  "version": "1.1.0",
+  "description": "Loto Games ERP / POS - aplicación de escritorio para Windows",
+  "main": "electron/main.cjs",
+  "author": "Loto Games",
+  "license": "UNLICENSED",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Highdiego666/ERP-Loto-Games.git"
+  },
+  "scripts": {
+    "start": "electron .",
+    "desktop": "electron .",
+    "pack:win": "electron-builder --win dir --x64 --publish never",
+    "dist:win": "electron-builder --win nsis --x64 --publish never",
+    "release:win": "electron-builder --win nsis --x64 --publish always"
+  },
+  "dependencies": {
+    "electron-updater": "6.8.9"
+  },
+  "devDependencies": {
+    "electron": "43.2.0",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "com.lotogames.pos",
+    "productName": "Loto Games POS",
+    "copyright": "Copyright © Loto Games",
+    "asar": true,
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "index.html",
+      "css/**/*",
+      "js/**/*",
+      "assets/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "extraMetadata": {
+      "main": "electron/main.cjs"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "Loto-Games-POS-Setup-${version}.${ext}",
+      "publisherName": "Loto Games",
+      "publish": [
+        {
+          "provider": "github",
+          "owner": "Highdiego666",
+          "repo": "ERP-Loto-Games"
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Loto Games POS",
+      "deleteAppDataOnUninstall": false
+    }
+  }
+}
