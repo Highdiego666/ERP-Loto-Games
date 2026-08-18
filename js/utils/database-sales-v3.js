@@ -1,6 +1,6 @@
 // ============================================
 // LOTO GAMES POS - VENTAS / DATABASE V3
-// Persiste subtotal y descuento sin alterar la capa general
+// Persiste subtotal y descuento + diagnóstico seguro de Supabase
 // ============================================
 
 (function () {
@@ -20,6 +20,57 @@
     return Number.isFinite(number) ? number : fallback;
   };
   const round2 = value => Math.round((numberOr(value) + Number.EPSILON) * 100) / 100;
+
+  // Verificación de sólo lectura. No inserta, actualiza ni elimina datos.
+  // Sirve para validar la migración antes de registrar una venta real.
+  db.verificarConexionFinal = async function () {
+    if (!hasSupabase()) {
+      return {
+        ok: false,
+        modo: 'demo/local',
+        mensaje: 'Supabase no está activo. Abre el POS sin ?demo=1 para verificar la base real.'
+      };
+    }
+
+    const pruebas = [
+      ['productos', 'id,nombre,stock,precio_cliente,precio_mayorista,precio_plaza'],
+      ['clientes', 'id,nombre,tipo_cliente,credito_habilitado'],
+      ['usuarios', 'id,nombre,email,rol,estado,privilegios'],
+      ['ventas', 'id,total,subtotal,descuento_aplicado,descuento_porcentaje,descuento_monto,fecha'],
+      ['traspasos', 'id,producto_id,origen,destino,estado,fecha'],
+      ['cuentas_plaza_movimientos', 'id,cliente_id,tipo,monto,fecha']
+    ];
+
+    const resultado = {
+      ok: true,
+      modo: 'supabase',
+      tablas: {}
+    };
+
+    for (const [tabla, columnas] of pruebas) {
+      const { data, error, count } = await window.supabase
+        .from(tabla)
+        .select(columnas, { count: 'exact' })
+        .limit(1);
+
+      if (error) {
+        resultado.ok = false;
+        resultado.tablas[tabla] = {
+          ok: false,
+          error: error.message,
+          code: error.code || null
+        };
+      } else {
+        resultado.tablas[tabla] = {
+          ok: true,
+          count: Number.isFinite(count) ? count : null,
+          muestra: data?.[0] || null
+        };
+      }
+    }
+
+    return resultado;
+  };
 
   db.registrarVenta = async function (venta) {
     const total = round2(venta.total);
@@ -90,5 +141,5 @@
     return row;
   };
 
-  console.log('✅ Database Sales V3: subtotal + descuento + total persistentes');
+  console.log('✅ Database Sales V3: descuento persistente + diagnóstico de conexión');
 })();
