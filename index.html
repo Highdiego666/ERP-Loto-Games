@@ -66,7 +66,7 @@
   <script src="js/modules/login-v2.js"></script>
   <script src="js/modules/productos-v2.js"></script>
   <script src="js/modules/productos-label-v2.js"></script>
-  <script src="js/modules/ventas-v2.js"></script>
+  <script src="js/modules/ventas-v3.js"></script>
   <script src="js/modules/clientes-v2.js"></script>
   <script src="js/modules/usuarios-v2.js"></script>
   <script src="js/modules/traspasos-v2.js"></script>
@@ -74,7 +74,7 @@
   <script src="js/modules/corte-v2.js"></script>
 
   <script src="js/app-v2.js"></script>
-  <script src="js/keyboard-v2.js"></script>
+  <script src="js/keyboard-v3.js"></script>
 
   <script>
     setTimeout(() => {
@@ -88,7 +88,7 @@
       };
       const missing=Object.entries(modules).filter(([,v])=>v!=='function').map(([k])=>k);
       if(missing.length) console.warn('⚠️ Módulos faltantes:',missing);
-      else console.log('✅ LOTO GAMES POS V2 listo',modules);
+      else console.log('✅ LOTO GAMES POS V3 listo',modules);
     },1000);
   </script>
 </body>
