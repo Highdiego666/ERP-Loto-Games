@@ -1,13 +1,13 @@
-name: POS V2 checks
+name: POS V1 checks
 
 on:
   push:
-    branches: [final-pos-fixes, main]
+    branches: [release-v1-polish, final-pos-fixes, main]
   pull_request:
     branches: [main]
 
 jobs:
-  syntax:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,3 +17,15 @@ jobs:
       - name: Check JavaScript syntax
         run: |
           find js -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+      - name: Check release assets
+        run: |
+          test -f index.html
+          test -f css/style.css
+          test -f assets/img/loto-games-logo.svg
+          grep -q 'assets/img/loto-games-logo.svg' index.html
+          grep -q 'LOTO GAMES ERP / POS V1' index.html
+      - name: Check Supabase migrations
+        run: |
+          test -f supabase/migrations/20260818_pos_final.sql
+          test -f supabase/migrations/20260818_ventas_descuento.sql
+          test -f supabase/migrations/20260818_productos_markup5.sql
