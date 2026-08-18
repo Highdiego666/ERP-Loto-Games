@@ -18,7 +18,7 @@
     .error-module { background:var(--bg-card); border-radius:16px; padding:40px; text-align:center; border:1px solid var(--border); }
     #loginRoot { position:fixed; inset:0; z-index:999999; }
     @media (max-width:1000px) {
-      #content > div[style*="grid-template-columns:minmax(0,1fr) 370px"] { grid-template-columns:1fr !important; }
+      #content > div[style*="grid-template-columns:minmax(0,1fr) 390px"] { grid-template-columns:1fr !important; }
     }
   </style>
 </head>
@@ -52,6 +52,7 @@
   <script src="js/supabase-client.js"></script>
   <script src="js/utils/database.js"></script>
   <script src="js/utils/database-v2.js"></script>
+  <script src="js/utils/database-sales-v3.js"></script>
   <script src="js/utils/compat-v2.js"></script>
   <script src="js/utils/auth-v2.js"></script>
 
@@ -66,7 +67,7 @@
   <script src="js/modules/login-v2.js"></script>
   <script src="js/modules/productos-v2.js"></script>
   <script src="js/modules/productos-label-v2.js"></script>
-  <script src="js/modules/ventas-v3.js"></script>
+  <script src="js/modules/ventas-v4.js"></script>
   <script src="js/modules/clientes-v2.js"></script>
   <script src="js/modules/usuarios-v2.js"></script>
   <script src="js/modules/traspasos-v2.js"></script>
@@ -74,7 +75,7 @@
   <script src="js/modules/corte-v2.js"></script>
 
   <script src="js/app-v2.js"></script>
-  <script src="js/keyboard-v3.js"></script>
+  <script src="js/keyboard-v4.js"></script>
 
   <script>
     setTimeout(() => {
@@ -88,7 +89,7 @@
       };
       const missing=Object.entries(modules).filter(([,v])=>v!=='function').map(([k])=>k);
       if(missing.length) console.warn('⚠️ Módulos faltantes:',missing);
-      else console.log('✅ LOTO GAMES POS V3 listo',modules);
+      else console.log('✅ LOTO GAMES POS V4 listo',modules);
     },1000);
   </script>
 </body>
