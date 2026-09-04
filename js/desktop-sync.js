@@ -1,7 +1,7 @@
 // ============================================
 // LOTO GAMES - SINCRONIZACIÓN OFFLINE-FIRST
 // Local es la fuente de trabajo. La nube exige una sesión Supabase Auth
-// cuyo correo corresponda a un usuario activo de Loto Games.
+// cuyo correo corresponda a un administrador activo de Loto Games.
 // ============================================
 
 (function () {
@@ -110,10 +110,11 @@
     const users = await fetchWholeTable(client, 'usuarios');
     const current = users.find(user =>
       String(user.email || '').trim().toLowerCase() === email &&
-      (user.estado || 'activo') === 'activo'
+      (user.estado || 'activo') === 'activo' &&
+      String(user.rol || '').trim().toLowerCase() === 'admin'
     );
     if (!current) {
-      throw new Error('Esta cuenta de nube no está autorizada en Loto Games.');
+      throw new Error('La sincronización requiere una cuenta administradora activa de Loto Games.');
     }
 
     return { email, current, users };
@@ -224,7 +225,7 @@
     } catch (error) {
       console.warn('Sincronización pendiente:', error);
       const message = error?.message || String(error);
-      const unlinked = /no vinculada|no está autorizada|jwt|auth|permission|policy|rls|row-level|not authorized|unauthorized/i.test(message);
+      const unlinked = /no vinculada|administradora activa|jwt|auth|permission|policy|rls|row-level|not authorized|unauthorized/i.test(message);
       setStatus('local', unlinked ? 'Local · nube sin autorizar' : 'Local · cambios pendientes', message);
       return { ok: false, error: message };
     } finally {
