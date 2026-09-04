@@ -116,7 +116,7 @@ class LocalStore {
     const recordId = normalizeId(id);
     if (!recordId) return null;
     const row = this.db.prepare(
-      `SELECT payload, deleted FROM records WHERE entity = ? AND record_id = ?`
+      'SELECT payload, deleted FROM records WHERE entity = ? AND record_id = ?'
     ).get(entity, recordId);
     if (!row || (!includeDeleted && Number(row.deleted) === 1)) return null;
     return JSON.parse(row.payload);
@@ -275,7 +275,6 @@ class LocalStore {
   mergeCloud(entity, rows) {
     assertEntity(entity);
     const cloudRows = Array.isArray(rows) ? rows.filter(Boolean) : [];
-    const cloudIds = new Set(cloudRows.map(row => normalizeId(row.id)).filter(Boolean));
     this.db.exec('BEGIN IMMEDIATE');
     try {
       for (const row of cloudRows) {
@@ -287,15 +286,9 @@ class LocalStore {
         if (pending) continue;
         this._put(entity, row, { queue: false, syncState: 'synced' });
       }
-
-      const synced = this.db.prepare(`
-        SELECT record_id FROM records WHERE entity = ? AND sync_state = 'synced'
-      `).all(entity);
-      for (const local of synced) {
-        if (!cloudIds.has(local.record_id)) {
-          this.db.prepare('DELETE FROM records WHERE entity = ? AND record_id = ?').run(entity, local.record_id);
-        }
-      }
+      // No inferimos borrados por ausencia en una consulta de nube. Una respuesta puede
+      // estar paginada, limitada por RLS o temporalmente incompleta. Los borrados locales
+      // se propagan explícitamente por sync_queue.
       this.db.exec('COMMIT');
       return { merged: cloudRows.length };
     } catch (error) {
@@ -317,7 +310,7 @@ class LocalStore {
 
   status() {
     const pending = Number(this.db.prepare('SELECT COUNT(*) AS total FROM sync_queue').get()?.total || 0);
-    const errors = Number(this.db.prepare("SELECT COUNT(*) AS total FROM sync_queue WHERE last_error IS NOT NULL").get()?.total || 0);
+    const errors = Number(this.db.prepare('SELECT COUNT(*) AS total FROM sync_queue WHERE last_error IS NOT NULL').get()?.total || 0);
     const records = Number(this.db.prepare('SELECT COUNT(*) AS total FROM records WHERE deleted = 0').get()?.total || 0);
     return {
       pending,
