@@ -1,7 +1,7 @@
 // ============================================
 // LOTO GAMES - SINCRONIZACIÓN OFFLINE-FIRST
-// La UI escribe localmente. Esta capa vacía la cola hacia Supabase
-// cuando hay conexión sin bloquear ventas ni inventario.
+// Local es la fuente de trabajo. Primero se empujan cambios pendientes y,
+// cuando la cola queda vacía, se actualiza el espejo local desde Supabase.
 // ============================================
 
 (function () {
@@ -25,6 +25,7 @@
     productos: ['id','nombre','sku','codigo_barras','categoria','tipo','precio','stock','created_at','local','precio_cliente','precio_mayorista','precio_plaza','precio_base_cliente','precio_base_mayorista','precio_base_plaza','precio_markup_5_aplicado'],
     ventas: ['id','items','subtotal','iva','total','metodo_pago','comentario','fecha','usuario','descuento_aplicado','cliente_id','cliente_nombre','tipo_precio','es_credito_plaza','descuento_porcentaje','descuento_monto'],
     clientes: ['id','nombre','email','telefono','direccion','created_at','tipo_cliente','credito_habilitado','notas'],
+    // Nunca descargar ni subir password/pin heredados en texto plano.
     usuarios: ['id','nombre','email','rol','estado','privilegios','created_at','password_hash','password_salt','pin_hash','pin_salt'],
     servicios: ['id','cliente_id','equipo','problema','diagnostico','precio','estado','garantia_dias','created_at','cliente_nombre','tecnico_asignado','entregado_por'],
     traspasos: ['id','producto_id','producto_nombre','tipo','cantidad','motivo','usuario','fecha','created_at','local_origen','local_destino','locatario_nombre','locatario_telefono','monto','estado_pago','fecha_pago','producto_sku','origen','destino','estado'],
@@ -45,6 +46,8 @@
     esCreditoPlaza: 'es_credito_plaza'
   };
 
+  const PAGE_SIZE = 1000;
+  const MAX_PUSH_BATCHES = 100;
   let running = false;
   let timer = null;
 
@@ -53,9 +56,6 @@
     for (const [from, to] of Object.entries(aliases)) {
       if (source[from] !== undefined && source[to] === undefined) source[to] = source[from];
     }
-    if (source.created_at === undefined && source.fecha === undefined && entity !== 'productos') {
-      source.created_at = new Date().toISOString();
-    }
     const output = {};
     for (const key of ALLOWED[entity] || []) {
       if (source[key] !== undefined) output[key] = source[key];
@@ -63,41 +63,35 @@
     return output;
   }
 
-  function setStatus(state, text) {
-    const classes = ['db-status-online', 'db-status-offline', 'db-status-checking'];
+  function setStatus(type, text, detail = '') {
+    const className = {
+      ok: 'db-status-ok',
+      error: 'db-status-error',
+      local: 'db-status-demo',
+      checking: 'db-status-checking'
+    }[type] || 'db-status-checking';
+
     for (const id of ['dbStatusSidebar', 'dbStatusTop']) {
       const el = document.getElementById(id);
       if (!el) continue;
-      el.classList.remove(...classes);
-      el.classList.add(state === 'online' ? 'db-status-online' : state === 'offline' ? 'db-status-offline' : 'db-status-checking');
-      const span = el.querySelector('span:last-child');
-      if (span) span.textContent = text;
+      el.className = `db-status ${className}`;
+      el.innerHTML = `<span class="db-dot"></span><span>${text}</span>`;
+      el.title = detail;
     }
   }
 
-  async function syncOnce() {
-    if (running) return;
-    const client = window.cloudSupabase;
-    if (!client || !navigator.onLine) {
-      setStatus('offline', 'Local · sin conexión');
-      return;
-    }
+  async function pushPending(client) {
+    let pushed = 0;
 
-    running = true;
-    try {
+    for (let batch = 0; batch < MAX_PUSH_BATCHES; batch += 1) {
       const jobs = await desktop.sync.pending(100);
-      if (!jobs.length) {
-        setStatus('online', 'Local + nube · sincronizado');
-        return;
-      }
-
-      setStatus('checking', `Sincronizando ${jobs.length} cambio${jobs.length === 1 ? '' : 's'}…`);
+      if (!jobs.length) return pushed;
 
       for (const job of jobs) {
         const table = TABLES[job.entity];
         if (!table) {
           await desktop.sync.fail(job.id, `Entidad no permitida: ${job.entity}`);
-          continue;
+          throw new Error(`Entidad no permitida en cola: ${job.entity}`);
         }
 
         try {
@@ -107,21 +101,101 @@
           } else {
             const raw = JSON.parse(job.payload || '{}');
             const payload = normalize(job.entity, raw);
-            if (payload.id === undefined || payload.id === null) payload.id = Number(job.record_id);
+            if (payload.id === undefined || payload.id === null) {
+              const numericId = Number(job.record_id);
+              payload.id = Number.isSafeInteger(numericId) ? numericId : job.record_id;
+            }
             const { error } = await client.from(table).upsert(payload, { onConflict: 'id' });
             if (error) throw error;
           }
+
           await desktop.sync.complete(job.id);
+          pushed += 1;
         } catch (error) {
           await desktop.sync.fail(job.id, error?.message || String(error));
           throw error;
         }
       }
+    }
 
-      setStatus('online', 'Local + nube · sincronizado');
+    throw new Error('La cola de sincronización excedió el límite de seguridad por ciclo');
+  }
+
+  async function fetchWholeTable(client, entity) {
+    const table = TABLES[entity];
+    const columns = (ALLOWED[entity] || []).join(',');
+    const rows = [];
+
+    for (let offset = 0; ; offset += PAGE_SIZE) {
+      const { data, error } = await client
+        .from(table)
+        .select(columns)
+        .order('id', { ascending: true })
+        .range(offset, offset + PAGE_SIZE - 1);
+
+      if (error) throw error;
+      const page = data || [];
+      rows.push(...page);
+      if (page.length < PAGE_SIZE) break;
+    }
+
+    return rows;
+  }
+
+  async function pullCloudSnapshot(client) {
+    const storage = window.LotoDesktopStorage;
+    if (!storage?.applyRemoteCollection) {
+      throw new Error('Persistencia local no permite aplicar snapshot remoto');
+    }
+
+    let changedCollections = 0;
+    for (const entity of Object.keys(TABLES)) {
+      const rows = await fetchWholeTable(client, entity);
+      if (storage.applyRemoteCollection(entity, rows)) changedCollections += 1;
+    }
+
+    if (changedCollections > 0) {
+      window.dispatchEvent(new CustomEvent('loto:cloud-data-updated', {
+        detail: { changedCollections, at: new Date().toISOString() }
+      }));
+    }
+
+    return changedCollections;
+  }
+
+  async function syncOnce() {
+    if (running) return { ok: false, skipped: true };
+
+    const client = window.cloudSupabase;
+    if (!client || !navigator.onLine) {
+      setStatus('local', 'Local · sin conexión');
+      return { ok: true, localOnly: true };
+    }
+
+    running = true;
+    try {
+      const initialPending = await desktop.sync.pending(1);
+      setStatus('checking', initialPending.length ? 'Sincronizando cambios…' : 'Actualizando nube…');
+
+      const pushed = await pushPending(client);
+
+      // Nunca hacemos pull si quedó algo pendiente: así evitamos sobrescribir una
+      // modificación local que todavía no alcanzó Supabase.
+      const remaining = await desktop.sync.pending(1);
+      if (remaining.length) {
+        setStatus('local', 'Local · cambios pendientes');
+        return { ok: false, pushed, pending: true };
+      }
+
+      const pulled = await pullCloudSnapshot(client);
+      setStatus('ok', 'Local + nube · sincronizado');
+      return { ok: true, pushed, pulled };
     } catch (error) {
       console.warn('Sincronización pendiente:', error);
-      setStatus('offline', 'Local · cambios pendientes');
+      const message = error?.message || String(error);
+      const looksAuth = /jwt|auth|permission|policy|rls|row-level|not authorized|unauthorized/i.test(message);
+      setStatus('local', looksAuth ? 'Local · nube sin autorizar' : 'Local · cambios pendientes', message);
+      return { ok: false, error: message };
     } finally {
       running = false;
     }
@@ -130,11 +204,11 @@
   function start() {
     if (timer) return;
     window.addEventListener('online', syncOnce);
-    window.addEventListener('offline', () => setStatus('offline', 'Local · sin conexión'));
+    window.addEventListener('offline', () => setStatus('local', 'Local · sin conexión'));
     timer = setInterval(syncOnce, 30000);
-    setTimeout(syncOnce, 1500);
+    setTimeout(syncOnce, 1200);
   }
 
-  window.LotoSync = { syncOnce, start };
+  window.LotoSync = { syncOnce, start, pullCloudSnapshot };
   start();
 })();
