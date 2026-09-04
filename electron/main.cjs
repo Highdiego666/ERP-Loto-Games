@@ -7,14 +7,26 @@ let db;
 let dataDir;
 let dbPath;
 
+const ALLOWED_SYNC_ENTITIES = new Set([
+  'productos',
+  'ventas',
+  'clientes',
+  'usuarios',
+  'servicios',
+  'traspasos',
+  'cuentas_plaza_movimientos',
+  'movimientos_inventario'
+]);
+
 function ensureDatabase() {
   dataDir = path.join(app.getPath('userData'), 'data');
   fs.mkdirSync(dataDir, { recursive: true });
   dbPath = path.join(dataDir, 'loto-games.db');
   db = new Database(dbPath);
   db.pragma('journal_mode = WAL');
-  db.pragma('synchronous = NORMAL');
+  db.pragma('synchronous = FULL');
   db.pragma('foreign_keys = ON');
+  db.pragma('busy_timeout = 5000');
   db.exec(`
     CREATE TABLE IF NOT EXISTS kv_store (
       key TEXT PRIMARY KEY,
@@ -40,6 +52,57 @@ function ensureDatabase() {
   `);
 }
 
+function setKv(key, value) {
+  db.prepare(`
+    INSERT INTO kv_store(key, value, updated_at) VALUES(?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=CURRENT_TIMESTAMP
+  `).run(String(key), String(value));
+  return true;
+}
+
+function removeKv(key) {
+  db.prepare('DELETE FROM kv_store WHERE key=?').run(String(key));
+  return true;
+}
+
+function clearKv() {
+  db.prepare('DELETE FROM kv_store').run();
+  return true;
+}
+
+function enqueueJob(job) {
+  const entity = String(job?.entity || '');
+  const recordId = String(job?.recordId || '');
+  const operation = job?.operation === 'delete' ? 'delete' : 'upsert';
+
+  if (!ALLOWED_SYNC_ENTITIES.has(entity)) {
+    throw new Error(`Entidad de sincronización no permitida: ${entity || '(vacía)'}`);
+  }
+  if (!recordId) throw new Error('recordId de sincronización vacío');
+
+  const payload = operation === 'delete' ? null : JSON.stringify(job?.payload ?? {});
+  db.prepare(`
+    INSERT INTO sync_queue(entity, record_id, operation, payload, created_at, attempts, last_error)
+    VALUES(?, ?, ?, ?, CURRENT_TIMESTAMP, 0, NULL)
+    ON CONFLICT(entity, record_id) DO UPDATE SET
+      operation=excluded.operation,
+      payload=excluded.payload,
+      created_at=CURRENT_TIMESTAMP,
+      attempts=0,
+      last_error=NULL
+  `).run(entity, recordId, operation, payload);
+  return true;
+}
+
+function replySync(event, fn) {
+  try {
+    fn();
+    event.returnValue = { ok: true };
+  } catch (error) {
+    event.returnValue = { ok: false, error: error?.message || String(error) };
+  }
+}
+
 function createBackupIfNeeded() {
   if (!db || !dbPath || !fs.existsSync(dbPath)) return;
   const backupDir = path.join(app.getPath('userData'), 'backups');
@@ -61,50 +124,28 @@ function createBackupIfNeeded() {
 
 function registerIpc() {
   ipcMain.on('storage:load-all-sync', event => {
-    const rows = db.prepare('SELECT key, value FROM kv_store').all();
-    event.returnValue = Object.fromEntries(rows.map(row => [row.key, row.value]));
+    try {
+      const rows = db.prepare('SELECT key, value FROM kv_store').all();
+      event.returnValue = { ok: true, data: Object.fromEntries(rows.map(row => [row.key, row.value])) };
+    } catch (error) {
+      event.returnValue = { ok: false, error: error?.message || String(error), data: {} };
+    }
   });
 
-  ipcMain.handle('storage:set', (_event, key, value) => {
-    db.prepare(`
-      INSERT INTO kv_store(key, value, updated_at) VALUES(?, ?, CURRENT_TIMESTAMP)
-      ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=CURRENT_TIMESTAMP
-    `).run(String(key), String(value));
-    return true;
-  });
+  ipcMain.on('storage:set-sync', (event, key, value) => replySync(event, () => setKv(key, value)));
+  ipcMain.on('storage:remove-sync', (event, key) => replySync(event, () => removeKv(key)));
+  ipcMain.on('storage:clear-sync', event => replySync(event, clearKv));
 
-  ipcMain.handle('storage:remove', (_event, key) => {
-    db.prepare('DELETE FROM kv_store WHERE key=?').run(String(key));
-    return true;
-  });
+  ipcMain.handle('storage:set', (_event, key, value) => setKv(key, value));
+  ipcMain.handle('storage:remove', (_event, key) => removeKv(key));
+  ipcMain.handle('storage:clear', clearKv);
 
-  ipcMain.handle('storage:clear', () => {
-    db.prepare('DELETE FROM kv_store').run();
-    return true;
-  });
-
-  ipcMain.handle('sync:enqueue', (_event, job) => {
-    const entity = String(job?.entity || '');
-    const recordId = String(job?.recordId || '');
-    const operation = job?.operation === 'delete' ? 'delete' : 'upsert';
-    if (!entity || !recordId) return false;
-    const payload = operation === 'delete' ? null : JSON.stringify(job?.payload ?? {});
-    db.prepare(`
-      INSERT INTO sync_queue(entity, record_id, operation, payload, created_at, attempts, last_error)
-      VALUES(?, ?, ?, ?, CURRENT_TIMESTAMP, 0, NULL)
-      ON CONFLICT(entity, record_id) DO UPDATE SET
-        operation=excluded.operation,
-        payload=excluded.payload,
-        created_at=CURRENT_TIMESTAMP,
-        attempts=0,
-        last_error=NULL
-    `).run(entity, recordId, operation, payload);
-    return true;
-  });
+  ipcMain.on('sync:enqueue-sync', (event, job) => replySync(event, () => enqueueJob(job)));
+  ipcMain.handle('sync:enqueue', (_event, job) => enqueueJob(job));
 
   ipcMain.handle('sync:pending', (_event, limit = 100) => {
     return db.prepare(`
-      SELECT id, entity, record_id, operation, payload, attempts, created_at
+      SELECT id, entity, record_id, operation, payload, attempts, created_at, last_error
       FROM sync_queue ORDER BY id ASC LIMIT ?
     `).all(Math.max(1, Math.min(Number(limit) || 100, 500)));
   });
