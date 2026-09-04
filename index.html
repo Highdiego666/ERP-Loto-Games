@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
   <meta name="description" content="Loto Games ERP / POS - ventas, inventario, servicio técnico, clientes y cuenta de plaza">
   <meta name="author" content="LOTO GAMES">
@@ -10,10 +11,7 @@
   <title>Loto Games · ERP / POS</title>
 
   <link rel="icon" type="image/svg+xml" href="assets/img/loto-games-logo.svg">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
   <link rel="stylesheet" href="css/style.css">
 
   <style>
@@ -45,7 +43,7 @@
         <a href="#" data-module="corte" class="nav-item" style="border-top:1px solid var(--border);margin-top:8px;padding-top:12px;"><i class="fas fa-cash-register" style="color:#10b981;"></i><span style="color:#10b981;font-weight:600;">Corte de Caja</span></a>
       </nav>
       <div class="sidebar-footer">
-        <div id="dbStatusSidebar" class="db-status db-status-checking"><span class="db-dot"></span><span>Verificando Supabase…</span></div>
+        <div id="dbStatusSidebar" class="db-status db-status-checking"><span class="db-dot"></span><span>Verificando datos…</span></div>
         <div class="user-info-sidebar"><i class="fas fa-user-circle"></i><div><div class="user-name" id="userNameSidebar">Usuario</div><div class="user-role" id="userRoleSidebar">Rol</div></div></div>
       </div>
     </aside>
@@ -63,8 +61,13 @@
     </main>
   </div>
 
-  <!-- Datos -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Librerías empaquetadas: no dependen de Internet -->
+  <script src="vendor/chart.umd.js"></script>
+  <script src="vendor/JsBarcode.all.min.js"></script>
+  <script src="vendor/supabase.js"></script>
+
+  <!-- Persistencia de escritorio debe iniciar antes de la capa de datos -->
+  <script src="js/desktop-storage.js"></script>
   <script src="js/supabase-client.js"></script>
   <script src="js/utils/database.js"></script>
   <script src="js/utils/database-v2.js"></script>
@@ -75,10 +78,10 @@
 
   <!-- Módulos que se conservan sin handlers duplicados -->
   <script src="js/modules/dashboard.js"></script>
-  <script src="js/modules/ventas.js"></script><!-- sólo impresión de ticket y compatibilidad -->
+  <script src="js/modules/ventas.js"></script>
   <script src="js/modules/inventario.js"></script>
   <script src="js/modules/servicios.js"></script>
-  <script src="js/modules/reportes.js"></script><!-- funciones de reportes reutilizadas por reportes-v2 -->
+  <script src="js/modules/reportes.js"></script>
 
   <!-- Módulos finalizados -->
   <script src="js/modules/login-v2.js"></script>
@@ -94,22 +97,7 @@
 
   <script src="js/app-v2.js"></script>
   <script src="js/keyboard-v4.js"></script>
-
-  <script>
-    window.LOTO_VERSION = '1.0.0';
-    setTimeout(() => {
-      const modules = {
-        dashboard:typeof window.dashboardModule, ventas:typeof window.ventasModule,
-        productos:typeof window.productosModule, inventario:typeof window.inventarioModule,
-        servicios:typeof window.serviciosModule, clientes:typeof window.clientesModule,
-        usuarios:typeof window.usuariosModule, reportes:typeof window.reportesModule,
-        traspasos:typeof window.traspasosModule, corte:typeof window.corteModule,
-        login:typeof window.loginModule
-      };
-      const missing=Object.entries(modules).filter(([,v])=>v!=='function').map(([k])=>k);
-      if(missing.length) console.warn('⚠️ Módulos faltantes:',missing);
-      else console.log('✅ LOTO GAMES ERP / POS V1 listo',modules);
-    },1000);
-  </script>
+  <script src="js/desktop-sync.js"></script>
+  <script src="js/release-diagnostics.js"></script>
 </body>
 </html>
