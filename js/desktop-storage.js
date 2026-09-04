@@ -1,7 +1,7 @@
 // ============================================
 // LOTO GAMES - PERSISTENCIA LOCAL DE ESCRITORIO
-// localStorage sigue siendo la API de compatibilidad del frontend,
-// pero cada cambio se replica en SQLite mediante el preload seguro.
+// localStorage conserva compatibilidad con el frontend existente,
+// mientras SQLite es la copia durable y la cola registra cambios para nube.
 // ============================================
 
 (function () {
@@ -46,6 +46,43 @@
     return map;
   }
 
+  function persistSetSync(key, value) {
+    if (typeof desktop.storage.setSync === 'function') {
+      desktop.storage.setSync(key, value);
+      return;
+    }
+    desktop.storage.set(key, value).catch(error => console.error('SQLite set falló:', error));
+  }
+
+  function persistRemoveSync(key) {
+    if (typeof desktop.storage.removeSync === 'function') {
+      desktop.storage.removeSync(key);
+      return;
+    }
+    desktop.storage.remove(key).catch(error => console.error('SQLite remove falló:', error));
+  }
+
+  function persistClearSync() {
+    if (typeof desktop.storage.clearSync === 'function') {
+      desktop.storage.clearSync();
+      return;
+    }
+    desktop.storage.clear().catch(error => console.error('SQLite clear falló:', error));
+  }
+
+  function enqueueSync(job) {
+    try {
+      if (typeof desktop.sync.enqueueSync === 'function') {
+        desktop.sync.enqueueSync(job);
+      } else {
+        desktop.sync.enqueue(job).catch(error => console.warn('No se pudo encolar sincronización:', error));
+      }
+    } catch (error) {
+      // El dato ya quedó guardado localmente; una falla de cola no debe perder la operación.
+      console.warn('Dato local guardado, pero no se pudo encolar para nube:', error);
+    }
+  }
+
   function queueCollectionDiff(entity, previousRaw, nextRaw) {
     if (!MANAGED_COLLECTIONS.has(entity)) return;
     const before = byId(parseArray(previousRaw));
@@ -54,21 +91,19 @@
     for (const [id, record] of after) {
       const previous = before.get(id);
       if (!previous || JSON.stringify(previous) !== JSON.stringify(record)) {
-        desktop.sync.enqueue({ entity, recordId: id, operation: 'upsert', payload: record })
-          .catch(error => console.warn('No se pudo encolar sincronización:', error));
+        enqueueSync({ entity, recordId: id, operation: 'upsert', payload: record });
       }
     }
 
     for (const id of before.keys()) {
       if (!after.has(id)) {
-        desktop.sync.enqueue({ entity, recordId: id, operation: 'delete' })
-          .catch(error => console.warn('No se pudo encolar eliminación:', error));
+        enqueueSync({ entity, recordId: id, operation: 'delete' });
       }
     }
   }
 
-  // SQLite es la copia persistente de referencia del cliente de escritorio.
-  // En primera ejecución, si SQLite está vacío, importamos el perfil local existente.
+  // SQLite es la referencia persistente al iniciar la aplicación.
+  // En una primera ejecución sin SQLite, importamos cualquier perfil local existente.
   const sqliteSnapshot = desktop.storage.loadAll() || {};
   const sqliteKeys = Object.keys(sqliteSnapshot);
 
@@ -81,45 +116,106 @@
     for (let i = 0; i < window.localStorage.length; i += 1) {
       const key = window.localStorage.key(i);
       const value = nativeGet.call(window.localStorage, key);
-      if (key !== null && value !== null) desktop.storage.set(key, value).catch(() => {});
+      if (key !== null && value !== null) persistSetSync(key, value);
     }
     console.log('✅ Persistencia local: SQLite inicializado desde el perfil actual');
   }
 
   storageProto.setItem = function (key, value) {
     if (this !== window.localStorage) return nativeSet.call(this, key, value);
+
     const k = String(key);
     const v = String(value);
     const previous = nativeGet.call(this, k);
+
     nativeSet.call(this, k, v);
-    desktop.storage.set(k, v).catch(error => console.warn('SQLite set falló:', error));
+    try {
+      persistSetSync(k, v);
+    } catch (error) {
+      // Si SQLite falla, restauramos localStorage para no reportar un guardado que no fue durable.
+      if (previous === null) nativeRemove.call(this, k);
+      else nativeSet.call(this, k, previous);
+      throw error;
+    }
+
     queueCollectionDiff(k, previous, v);
   };
 
   storageProto.removeItem = function (key) {
     if (this !== window.localStorage) return nativeRemove.call(this, key);
+
     const k = String(key);
     const previous = nativeGet.call(this, k);
     nativeRemove.call(this, k);
-    desktop.storage.remove(k).catch(error => console.warn('SQLite remove falló:', error));
+
+    try {
+      persistRemoveSync(k);
+    } catch (error) {
+      if (previous !== null) nativeSet.call(this, k, previous);
+      throw error;
+    }
+
     if (MANAGED_COLLECTIONS.has(k)) queueCollectionDiff(k, previous, '[]');
   };
 
   storageProto.clear = function () {
     if (this !== window.localStorage) return nativeClear.call(this);
-    const previous = {};
-    for (const key of MANAGED_COLLECTIONS) previous[key] = nativeGet.call(this, key);
+
+    const snapshot = {};
+    for (let i = 0; i < this.length; i += 1) {
+      const key = this.key(i);
+      if (key !== null) snapshot[key] = nativeGet.call(this, key);
+    }
+
     nativeClear.call(this);
-    desktop.storage.clear().catch(error => console.warn('SQLite clear falló:', error));
-    for (const [key, raw] of Object.entries(previous)) queueCollectionDiff(key, raw, '[]');
+    try {
+      persistClearSync();
+    } catch (error) {
+      for (const [key, value] of Object.entries(snapshot)) {
+        if (value !== null) nativeSet.call(this, key, value);
+      }
+      throw error;
+    }
+
+    for (const key of MANAGED_COLLECTIONS) {
+      queueCollectionDiff(key, snapshot[key], '[]');
+    }
   };
+
+  function applyRemoteCollection(entity, records) {
+    if (!MANAGED_COLLECTIONS.has(entity)) {
+      throw new Error(`Colección remota no permitida: ${entity}`);
+    }
+
+    const normalized = Array.isArray(records) ? records : [];
+    const nextRaw = JSON.stringify(normalized);
+    const previous = nativeGet.call(window.localStorage, entity);
+    if (previous === nextRaw) return false;
+
+    // Importante: esta ruta NO usa localStorage.setItem(), para no reencolar como cambios locales.
+    nativeSet.call(window.localStorage, entity, nextRaw);
+    try {
+      persistSetSync(entity, nextRaw);
+    } catch (error) {
+      if (previous === null) nativeRemove.call(window.localStorage, entity);
+      else nativeSet.call(window.localStorage, entity, previous);
+      throw error;
+    }
+
+    return true;
+  }
 
   window.LotoDesktopStorage = {
     managedCollections: [...MANAGED_COLLECTIONS],
+    getCollection(entity) {
+      if (!MANAGED_COLLECTIONS.has(entity)) return [];
+      return parseArray(nativeGet.call(window.localStorage, entity));
+    },
+    applyRemoteCollection,
     async createBackup() {
       return desktop.backup.create();
     }
   };
 
-  console.log('✅ SQLite local activo como persistencia de escritorio');
+  console.log('✅ SQLite local activo como persistencia durable de escritorio');
 })();
