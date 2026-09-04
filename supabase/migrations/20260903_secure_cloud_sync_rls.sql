@@ -9,6 +9,21 @@ revoke all on schema private from public;
 revoke all on schema private from anon;
 grant usage on schema private to authenticated;
 
+-- Conserva el respaldo histórico, pero fuera del esquema expuesto. Es idempotente:
+-- en producción puede haberse movido previamente durante la auditoría.
+do $$
+begin
+  if to_regclass('public.productos_backup_pre_v5_20260818') is not null then
+    alter table public.productos_backup_pre_v5_20260818 set schema private;
+  end if;
+  if to_regclass('private.productos_backup_pre_v5_20260818') is not null then
+    revoke all on table private.productos_backup_pre_v5_20260818 from public;
+    revoke all on table private.productos_backup_pre_v5_20260818 from anon;
+    revoke all on table private.productos_backup_pre_v5_20260818 from authenticated;
+  end if;
+end
+$$;
+
 create index if not exists idx_usuarios_email_lower
   on public.usuarios ((lower(trim(email))))
   where nullif(trim(email), '') is not null;
