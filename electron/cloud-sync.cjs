@@ -3,6 +3,8 @@
 const SUPABASE_URL = 'https://vreznzasckljieptvqas.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_GyZkdKYivt0zJ2sQdYrfhw_CHlkwKeY';
 const API_ROOT = `${SUPABASE_URL}/rest/v1`;
+const PAGE_SIZE = 500;
+const MAX_PULL_ROWS_PER_ENTITY = 100000;
 
 const CONFIG = {
   productos: {
@@ -159,14 +161,27 @@ class CloudSync {
     return processed;
   }
 
+  async _pullEntity(cfg) {
+    const allRows = [];
+    const select = encodeURIComponent(cfg.columns.join(','));
+
+    for (let offset = 0; offset < MAX_PULL_ROWS_PER_ENTITY; offset += PAGE_SIZE) {
+      const url = `${API_ROOT}/${cfg.table}?select=${select}&order=id.asc&limit=${PAGE_SIZE}&offset=${offset}`;
+      const page = await this._request(url);
+      const rows = Array.isArray(page) ? page : [];
+      allRows.push(...rows);
+      if (rows.length < PAGE_SIZE) return allRows;
+    }
+
+    throw new Error(`La tabla ${cfg.table} superó el límite de seguridad de ${MAX_PULL_ROWS_PER_ENTITY} filas por sincronización.`);
+  }
+
   async pullAll() {
     let total = 0;
     for (const [entity, cfg] of Object.entries(CONFIG)) {
-      const select = encodeURIComponent(cfg.columns.join(','));
-      const rows = await this._request(`${API_ROOT}/${cfg.table}?select=${select}&order=id.asc`);
-      const safeRows = Array.isArray(rows) ? rows : [];
-      this.store.mergeCloud(entity, safeRows);
-      total += safeRows.length;
+      const rows = await this._pullEntity(cfg);
+      this.store.mergeCloud(entity, rows);
+      total += rows.length;
     }
     return total;
   }
