@@ -1,7 +1,7 @@
 {
   "name": "loto-games-pos",
-  "version": "1.1.0",
-  "description": "Loto Games ERP / POS - aplicación de escritorio para Windows",
+  "version": "1.2.0",
+  "description": "Loto Games ERP / POS - aplicación de escritorio offline-first para Windows",
   "main": "electron/main.cjs",
   "author": "Loto Games",
   "license": "UNLICENSED",
@@ -13,12 +13,16 @@
   "scripts": {
     "start": "electron .",
     "desktop": "electron .",
+    "check": "node scripts/check.cjs",
     "pack:win": "electron-builder --win dir --x64 --publish never",
     "dist:win": "electron-builder --win nsis --x64 --publish never",
     "release:win": "electron-builder --win nsis --x64 --publish always"
   },
   "dependencies": {
-    "electron-updater": "6.8.9"
+    "@fortawesome/fontawesome-free": "7.3.1",
+    "chart.js": "4.5.1",
+    "electron-updater": "6.8.9",
+    "jsbarcode": "3.12.3"
   },
   "devDependencies": {
     "electron": "43.2.0",
@@ -39,7 +43,12 @@
       "js/**/*",
       "assets/**/*",
       "electron/**/*",
-      "package.json"
+      "scripts/**/*",
+      "package.json",
+      "node_modules/@fortawesome/fontawesome-free/css/all.min.css",
+      "node_modules/@fortawesome/fontawesome-free/webfonts/**/*",
+      "node_modules/chart.js/dist/chart.umd.js",
+      "node_modules/jsbarcode/dist/JsBarcode.all.min.js"
     ],
     "extraMetadata": {
       "main": "electron/main.cjs"
