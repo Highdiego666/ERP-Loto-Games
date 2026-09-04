@@ -15,6 +15,7 @@
     "desktop": "electron .",
     "prepare:icon": "node scripts/build-icon.cjs",
     "check": "npm run prepare:icon && node scripts/check.cjs",
+    "test:local": "node scripts/test-local-db.cjs",
     "pack:win": "npm run prepare:icon && electron-builder --win dir --x64 --publish never",
     "dist:win": "npm run prepare:icon && electron-builder --win nsis --x64 --publish never",
     "release:win": "npm run prepare:icon && electron-builder --win nsis --x64 --publish always"
@@ -64,7 +65,6 @@
       ],
       "icon": "build/icon.ico",
       "artifactName": "Loto-Games-POS-Setup-${version}.${ext}",
-      "publisherName": "Loto Games",
       "publish": [
         {
           "provider": "github",
