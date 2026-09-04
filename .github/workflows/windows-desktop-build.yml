@@ -35,6 +35,9 @@ jobs:
       - name: Static checks
         run: npm run check
 
+      - name: Test local SQLite data layer
+        run: npm run test:local
+
       - name: Build NSIS installer
         run: npm run dist:win
         env:
