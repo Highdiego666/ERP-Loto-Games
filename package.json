@@ -13,10 +13,11 @@
   "scripts": {
     "start": "electron .",
     "desktop": "electron .",
-    "check": "node scripts/check.cjs",
-    "pack:win": "electron-builder --win dir --x64 --publish never",
-    "dist:win": "electron-builder --win nsis --x64 --publish never",
-    "release:win": "electron-builder --win nsis --x64 --publish always"
+    "prepare:icon": "node scripts/build-icon.cjs",
+    "check": "npm run prepare:icon && node scripts/check.cjs",
+    "pack:win": "npm run prepare:icon && electron-builder --win dir --x64 --publish never",
+    "dist:win": "npm run prepare:icon && electron-builder --win nsis --x64 --publish never",
+    "release:win": "npm run prepare:icon && electron-builder --win nsis --x64 --publish always"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "7.3.1",
@@ -26,7 +27,8 @@
   },
   "devDependencies": {
     "electron": "43.2.0",
-    "electron-builder": "26.15.3"
+    "electron-builder": "26.15.3",
+    "sharp": "0.35.4"
   },
   "build": {
     "appId": "com.lotogames.pos",
