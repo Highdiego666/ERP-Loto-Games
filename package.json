@@ -1,0 +1,75 @@
+{
+  "name": "loto-games-erp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LOTO GAMES ERP / POS para Windows con persistencia local y sincronización Supabase",
+  "main": "electron/main.cjs",
+  "author": "LOTO GAMES",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "npm run vendor && electron .",
+    "vendor": "node scripts/copy-vendor.mjs",
+    "check:js": "find js electron scripts -type f \\( -name '*.js' -o -name '*.cjs' -o -name '*.mjs' \\) -print0 | xargs -0 -n1 node --check",
+    "check": "npm run vendor && npm run check:js && node scripts/validate-release.mjs",
+    "dist:win": "npm run check && electron-builder --win nsis --x64",
+    "dist:portable": "npm run check && electron-builder --win portable --x64",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-free": "6.7.2",
+    "@supabase/supabase-js": "2.112.4",
+    "better-sqlite3": "13.0.3",
+    "chart.js": "4.5.1",
+    "jsbarcode": "3.12.3"
+  },
+  "devDependencies": {
+    "electron": "44.1.1",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "mx.lotogames.erp",
+    "productName": "Loto Games",
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**"
+    ],
+    "files": [
+      "index.html",
+      "css/**",
+      "js/**",
+      "assets/**",
+      "vendor/**",
+      "electron/**",
+      "package.json",
+      "!**/*.save",
+      "!docs/**",
+      "!supabase/**"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "artifactName": "LotoGames-Setup-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Loto Games",
+      "deleteAppDataOnUninstall": false
+    },
+    "portable": {
+      "artifactName": "LotoGames-Portable-${version}-${arch}.${ext}"
+    }
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

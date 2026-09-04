@@ -1,0 +1,56 @@
+name: Windows release check
+
+on:
+  push:
+    branches: [release/windows-offline-first]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate-and-build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        shell: pwsh
+        run: npm install --ignore-scripts
+
+      - name: Rebuild native Electron dependency
+        shell: pwsh
+        run: npx electron-builder install-app-deps
+
+      - name: Copy offline vendor assets
+        shell: pwsh
+        run: npm run vendor
+
+      - name: Validate JavaScript syntax
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem js,electron,scripts -Recurse -File | Where-Object { $_.Extension -in '.js','.cjs','.mjs' }
+          foreach ($file in $files) {
+            node --check $file.FullName
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+
+      - name: Validate release contract
+        shell: pwsh
+        run: node scripts/validate-release.mjs
+
+      - name: Build NSIS installer
+        shell: pwsh
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npx electron-builder --win nsis --x64 --publish never
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: LotoGames-Windows-x64
+          path: dist/*.exe
+          if-no-files-found: error
