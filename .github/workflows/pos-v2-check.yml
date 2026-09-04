@@ -26,6 +26,7 @@ jobs:
           test -f assets/img/loto-games-logo.svg
           grep -q 'assets/img/loto-games-logo.svg' index.html
           grep -q 'Loto Games · ERP / POS' index.html
+          grep -q 'js/cloud-auth.js' index.html
           python3 - <<'PY'
           import xml.etree.ElementTree as ET
           ET.parse('assets/img/loto-games-logo.svg')
@@ -39,6 +40,7 @@ jobs:
           test -f supabase/migrations/20260818_productos_markup5.sql
           test -f supabase/migrations/20260818_v1_schema_final.sql
           test -f supabase/migrations/20260903_windows_offline_bigint.sql
+          test -f supabase/migrations/20260903_secure_cloud_sync_rls.sql
 
       - name: Static smoke test
         run: |
