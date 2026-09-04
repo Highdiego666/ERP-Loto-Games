@@ -1,7 +1,7 @@
 // ============================================
 // LOTO GAMES - SINCRONIZACIÓN OFFLINE-FIRST
-// Local es la fuente de trabajo. Primero se empujan cambios pendientes y,
-// cuando la cola queda vacía, se actualiza el espejo local desde Supabase.
+// Local es la fuente de trabajo. La nube exige una sesión Supabase Auth
+// cuyo correo corresponda a un usuario activo de Loto Games.
 // ============================================
 
 (function () {
@@ -80,6 +80,45 @@
     }
   }
 
+  async function fetchWholeTable(client, entity) {
+    const table = TABLES[entity];
+    const columns = (ALLOWED[entity] || []).join(',');
+    const rows = [];
+
+    for (let offset = 0; ; offset += PAGE_SIZE) {
+      const { data, error } = await client
+        .from(table)
+        .select(columns)
+        .order('id', { ascending: true })
+        .range(offset, offset + PAGE_SIZE - 1);
+
+      if (error) throw error;
+      const page = data || [];
+      rows.push(...page);
+      if (page.length < PAGE_SIZE) break;
+    }
+
+    return rows;
+  }
+
+  async function authorizeCloud(client) {
+    const { data, error } = await client.auth.getSession();
+    if (error) throw error;
+    const email = String(data?.session?.user?.email || '').trim().toLowerCase();
+    if (!email) throw new Error('Nube no vinculada: inicia sesión de sincronización.');
+
+    const users = await fetchWholeTable(client, 'usuarios');
+    const current = users.find(user =>
+      String(user.email || '').trim().toLowerCase() === email &&
+      (user.estado || 'activo') === 'activo'
+    );
+    if (!current) {
+      throw new Error('Esta cuenta de nube no está autorizada en Loto Games.');
+    }
+
+    return { email, current, users };
+  }
+
   async function pushPending(client) {
     let pushed = 0;
 
@@ -121,37 +160,27 @@
     throw new Error('La cola de sincronización excedió el límite de seguridad por ciclo');
   }
 
-  async function fetchWholeTable(client, entity) {
-    const table = TABLES[entity];
-    const columns = (ALLOWED[entity] || []).join(',');
-    const rows = [];
-
-    for (let offset = 0; ; offset += PAGE_SIZE) {
-      const { data, error } = await client
-        .from(table)
-        .select(columns)
-        .order('id', { ascending: true })
-        .range(offset, offset + PAGE_SIZE - 1);
-
-      if (error) throw error;
-      const page = data || [];
-      rows.push(...page);
-      if (page.length < PAGE_SIZE) break;
-    }
-
-    return rows;
-  }
-
-  async function pullCloudSnapshot(client) {
+  async function pullCloudSnapshot(client, authorizedUsers = null) {
     const storage = window.LotoDesktopStorage;
     if (!storage?.applyRemoteCollection) {
       throw new Error('Persistencia local no permite aplicar snapshot remoto');
     }
 
+    // Validamos primero la identidad contra usuarios. No se escribe nada local
+    // hasta haber descargado correctamente TODAS las colecciones.
+    const authorization = authorizedUsers
+      ? { users: authorizedUsers }
+      : await authorizeCloud(client);
+
+    const snapshots = { usuarios: authorization.users };
+    for (const entity of Object.keys(TABLES)) {
+      if (entity === 'usuarios') continue;
+      snapshots[entity] = await fetchWholeTable(client, entity);
+    }
+
     let changedCollections = 0;
     for (const entity of Object.keys(TABLES)) {
-      const rows = await fetchWholeTable(client, entity);
-      if (storage.applyRemoteCollection(entity, rows)) changedCollections += 1;
+      if (storage.applyRemoteCollection(entity, snapshots[entity] || [])) changedCollections += 1;
     }
 
     if (changedCollections > 0) {
@@ -174,9 +203,11 @@
 
     running = true;
     try {
-      const initialPending = await desktop.sync.pending(1);
-      setStatus('checking', initialPending.length ? 'Sincronizando cambios…' : 'Actualizando nube…');
+      setStatus('checking', 'Verificando nube…');
+      const authorization = await authorizeCloud(client);
 
+      const initialPending = await desktop.sync.pending(1);
+      if (initialPending.length) setStatus('checking', 'Sincronizando cambios…');
       const pushed = await pushPending(client);
 
       // Nunca hacemos pull si quedó algo pendiente: así evitamos sobrescribir una
@@ -187,14 +218,14 @@
         return { ok: false, pushed, pending: true };
       }
 
-      const pulled = await pullCloudSnapshot(client);
+      const pulled = await pullCloudSnapshot(client, authorization.users);
       setStatus('ok', 'Local + nube · sincronizado');
-      return { ok: true, pushed, pulled };
+      return { ok: true, pushed, pulled, cloudUser: authorization.current };
     } catch (error) {
       console.warn('Sincronización pendiente:', error);
       const message = error?.message || String(error);
-      const looksAuth = /jwt|auth|permission|policy|rls|row-level|not authorized|unauthorized/i.test(message);
-      setStatus('local', looksAuth ? 'Local · nube sin autorizar' : 'Local · cambios pendientes', message);
+      const unlinked = /no vinculada|no está autorizada|jwt|auth|permission|policy|rls|row-level|not authorized|unauthorized/i.test(message);
+      setStatus('local', unlinked ? 'Local · nube sin autorizar' : 'Local · cambios pendientes', message);
       return { ok: false, error: message };
     } finally {
       running = false;
@@ -209,6 +240,6 @@
     setTimeout(syncOnce, 1200);
   }
 
-  window.LotoSync = { syncOnce, start, pullCloudSnapshot };
+  window.LotoSync = { syncOnce, start, authorizeCloud, pullCloudSnapshot };
   start();
 })();
