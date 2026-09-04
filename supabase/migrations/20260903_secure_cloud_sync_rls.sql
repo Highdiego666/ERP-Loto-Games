@@ -73,6 +73,32 @@ grant select, insert, update, delete on table public.traspasos to authenticated;
 grant select, insert, update, delete on table public.cuentas_plaza_movimientos to authenticated;
 grant select, insert, update, delete on table public.movimientos_inventario to authenticated;
 
+-- Revoca también el uso directo de secuencias a anon. Aunque el cliente offline
+-- envía sus propios IDs, authenticated conserva USAGE/SELECT por compatibilidad
+-- con inserts administrativos que dejen que PostgreSQL genere el identificador.
+do $$
+declare
+  seq_name text;
+begin
+  foreach seq_name in array array[
+    pg_get_serial_sequence('public.productos', 'id'),
+    pg_get_serial_sequence('public.ventas', 'id'),
+    pg_get_serial_sequence('public.clientes', 'id'),
+    pg_get_serial_sequence('public.usuarios', 'id'),
+    pg_get_serial_sequence('public.servicios_tecnicos', 'id'),
+    pg_get_serial_sequence('public.traspasos', 'id'),
+    pg_get_serial_sequence('public.movimientos_inventario', 'id')
+  ]
+  loop
+    if seq_name is not null then
+      execute format('revoke all on sequence %s from anon', seq_name);
+      execute format('revoke all on sequence %s from public', seq_name);
+      execute format('grant usage, select on sequence %s to authenticated', seq_name);
+    end if;
+  end loop;
+end
+$$;
+
 -- Elimina las políticas históricas tipo "Acceso público ..." y cualquier otra
 -- política previa sobre el conjunto sincronizado, evitando que una regla permisiva
 -- antigua se combine con la nueva política.
