@@ -48,7 +48,7 @@
 
   const PAGE_SIZE = 1000;
   const MAX_PUSH_BATCHES = 100;
-  let running = false;
+  let currentSync = null;
   let timer = null;
 
   function normalize(entity, record) {
@@ -167,12 +167,12 @@
       throw new Error('Persistencia local no permite aplicar snapshot remoto');
     }
 
-    // Validamos primero la identidad contra usuarios. No se escribe nada local
-    // hasta haber descargado correctamente TODAS las colecciones.
     const authorization = authorizedUsers
       ? { users: authorizedUsers }
       : await authorizeCloud(client);
 
+    // Descarga todas las colecciones antes de modificar el estado local para evitar
+    // una restauración parcial si una tabla remota falla a mitad del proceso.
     const snapshots = { usuarios: authorization.users };
     for (const entity of Object.keys(TABLES)) {
       if (entity === 'usuarios') continue;
@@ -193,16 +193,13 @@
     return changedCollections;
   }
 
-  async function syncOnce() {
-    if (running) return { ok: false, skipped: true };
-
+  async function performSync() {
     const client = window.cloudSupabase;
     if (!client || !navigator.onLine) {
       setStatus('local', 'Local · sin conexión');
       return { ok: true, localOnly: true };
     }
 
-    running = true;
     try {
       setStatus('checking', 'Verificando nube…');
       const authorization = await authorizeCloud(client);
@@ -228,9 +225,18 @@
       const unlinked = /no vinculada|administradora activa|jwt|auth|permission|policy|rls|row-level|not authorized|unauthorized/i.test(message);
       setStatus('local', unlinked ? 'Local · nube sin autorizar' : 'Local · cambios pendientes', message);
       return { ok: false, error: message };
-    } finally {
-      running = false;
     }
+  }
+
+  function syncOnce() {
+    // Si login, reconexión e intervalo disparan sync al mismo tiempo, todos esperan
+    // exactamente la misma ejecución. Así el bootstrap nunca falla por un "skip"
+    // producido por su propia sesión de Auth.
+    if (currentSync) return currentSync;
+    currentSync = performSync().finally(() => {
+      currentSync = null;
+    });
+    return currentSync;
   }
 
   function start() {
