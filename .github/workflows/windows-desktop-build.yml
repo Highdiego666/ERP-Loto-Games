@@ -1,0 +1,56 @@
+name: Windows Desktop Build
+
+on:
+  push:
+    branches: [windows-desktop-v1]
+  pull_request:
+    branches: [main]
+    paths:
+      - 'electron/**'
+      - 'js/**'
+      - 'css/**'
+      - 'assets/**'
+      - 'build/**'
+      - 'scripts/**'
+      - 'index.html'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/windows-desktop-build.yml'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Static checks
+        run: npm run check
+
+      - name: Build NSIS installer
+        run: npm run dist:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify installer
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem -Path dist -Filter "Loto-Games-POS-Setup-*.exe"
+          if ($files.Count -lt 1) { throw "No se generó el instalador .exe" }
+          $files | Format-Table Name, Length
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: Loto-Games-POS-Windows
+          path: dist/Loto-Games-POS-Setup-*.exe
+          if-no-files-found: error
+          retention-days: 14
