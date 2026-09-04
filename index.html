@@ -7,14 +7,13 @@
   <meta name="author" content="LOTO GAMES">
   <meta name="theme-color" content="#050914">
   <meta name="color-scheme" content="dark">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://vreznzasckljieptvqas.supabase.co wss://vreznzasckljieptvqas.supabase.co https://api.github.com; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com; img-src 'self' data: blob:;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; object-src 'none'; base-uri 'none'; frame-src 'none'; form-action 'self';">
   <title>Loto Games · ERP / POS</title>
 
   <link rel="icon" type="image/svg+xml" href="assets/img/loto-games-logo.svg">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <link rel="stylesheet" href="node_modules/@fortawesome/fontawesome-free/css/all.min.css">
+  <script src="node_modules/chart.js/dist/chart.umd.js"></script>
+  <script src="node_modules/jsbarcode/dist/JsBarcode.all.min.js"></script>
   <link rel="stylesheet" href="css/style.css">
 
   <style>
@@ -31,7 +30,7 @@
     <aside class="sidebar">
       <div class="logo-area">
         <img src="assets/img/loto-games-logo.svg" class="brand-logo-sidebar" alt="Loto Games">
-        <span class="app-version">ERP · POS V1.1</span>
+        <span class="app-version">ERP · POS V1.2</span>
       </div>
       <nav class="nav-menu">
         <a href="#" data-module="dashboard" class="nav-item active"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>
@@ -46,7 +45,7 @@
         <a href="#" data-module="corte" class="nav-item" style="border-top:1px solid var(--border);margin-top:8px;padding-top:12px;"><i class="fas fa-cash-register" style="color:#10b981;"></i><span style="color:#10b981;font-weight:600;">Corte de Caja</span></a>
       </nav>
       <div class="sidebar-footer">
-        <div id="dbStatusSidebar" class="db-status db-status-checking"><span class="db-dot"></span><span>Verificando Supabase…</span></div>
+        <div id="dbStatusSidebar" class="db-status db-status-checking"><span class="db-dot"></span><span>Inicializando datos locales…</span></div>
         <div class="user-info-sidebar"><i class="fas fa-user-circle"></i><div><div class="user-name" id="userNameSidebar">Usuario</div><div class="user-role" id="userRoleSidebar">Rol</div></div></div>
       </div>
     </aside>
@@ -55,7 +54,7 @@
       <header class="top-bar">
         <div class="page-title"><h1 id="pageTitle">Dashboard</h1><p id="pageDescription">Visión general del negocio</p></div>
         <div class="top-bar-actions">
-          <div id="dbStatusTop" class="db-status db-status-checking"><span class="db-dot"></span><span>Base</span></div>
+          <div id="dbStatusTop" class="db-status db-status-checking"><span class="db-dot"></span><span>Local</span></div>
           <div class="date-time"><i class="far fa-calendar-alt"></i><span id="currentDate"></span></div>
           <div class="notifications"><i class="far fa-bell"></i><span class="badge" id="notificationBadge">0</span></div>
         </div>
@@ -64,8 +63,7 @@
     </main>
   </div>
 
-  <!-- Datos -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Datos / compatibilidad -->
   <script src="js/supabase-client.js"></script>
   <script src="js/utils/database.js"></script>
   <script src="js/utils/database-v2.js"></script>
@@ -75,12 +73,12 @@
   <script src="js/utils/auth-v2.js"></script>
   <script src="js/desktop-runtime.js"></script>
 
-  <!-- Módulos que se conservan sin handlers duplicados -->
+  <!-- Módulos base reutilizados -->
   <script src="js/modules/dashboard.js"></script>
-  <script src="js/modules/ventas.js"></script><!-- sólo impresión de ticket y compatibilidad -->
+  <script src="js/modules/ventas.js"></script>
   <script src="js/modules/inventario.js"></script>
   <script src="js/modules/servicios.js"></script>
-  <script src="js/modules/reportes.js"></script><!-- funciones de reportes reutilizadas por reportes-v2 -->
+  <script src="js/modules/reportes.js"></script>
 
   <!-- Módulos finalizados -->
   <script src="js/modules/login-v2.js"></script>
@@ -98,7 +96,7 @@
   <script src="js/keyboard-v4.js"></script>
 
   <script>
-    window.LOTO_VERSION = '1.1.0';
+    window.LOTO_VERSION = '1.2.0';
     setTimeout(() => {
       const modules = {
         dashboard:typeof window.dashboardModule, ventas:typeof window.ventasModule,
@@ -110,7 +108,7 @@
       };
       const missing=Object.entries(modules).filter(([,v])=>v!=='function').map(([k])=>k);
       if(missing.length) console.warn('⚠️ Módulos faltantes:',missing);
-      else console.log('✅ LOTO GAMES ERP / POS V1.1 listo',modules);
+      else console.log('✅ LOTO GAMES ERP / POS V1.2 listo',modules);
     },1000);
   </script>
 </body>
