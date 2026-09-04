@@ -2,7 +2,7 @@ name: POS V1 checks
 
 on:
   push:
-    branches: [release-v1-polish, final-pos-fixes, main]
+    branches: [release-v1-polish, final-pos-fixes, release/windows-offline-first, main]
   pull_request:
     branches: [main]
 
@@ -14,27 +14,32 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+
       - name: Check JavaScript syntax
         run: |
-          find js -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+          find js electron scripts -type f \( -name '*.js' -o -name '*.cjs' -o -name '*.mjs' \) -print0 | xargs -0 -n1 node --check
+
       - name: Check release assets
         run: |
           test -f index.html
           test -f css/style.css
           test -f assets/img/loto-games-logo.svg
           grep -q 'assets/img/loto-games-logo.svg' index.html
-          grep -q 'LOTO GAMES ERP / POS V1' index.html
+          grep -q 'Loto Games · ERP / POS' index.html
           python3 - <<'PY'
           import xml.etree.ElementTree as ET
           ET.parse('assets/img/loto-games-logo.svg')
           print('SVG OK')
           PY
+
       - name: Check Supabase migrations
         run: |
           test -f supabase/migrations/20260818_pos_final.sql
           test -f supabase/migrations/20260818_ventas_descuento.sql
           test -f supabase/migrations/20260818_productos_markup5.sql
           test -f supabase/migrations/20260818_v1_schema_final.sql
+          test -f supabase/migrations/20260903_windows_offline_bigint.sql
+
       - name: Static smoke test
         run: |
           python3 -m http.server 8080 --bind 127.0.0.1 >/tmp/loto-http.log 2>&1 &
