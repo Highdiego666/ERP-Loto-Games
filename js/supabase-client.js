@@ -1,21 +1,25 @@
 // ============================================
-// LOTO GAMES POS - CONEXIÓN SUPABASE
-// ?demo=1 desactiva la nube y usa únicamente almacenamiento local
+// LOTO GAMES POS - COMPATIBILIDAD DE NUBE
+// En Windows la sincronización vive en el proceso principal de Electron.
 // ============================================
 
-const SUPABASE_URL = "https://vreznzasckljieptvqas.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZyZXpuemFzY2tsamllcHR2cWFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4NzEwNTEsImV4cCI6MjA5NjQ0NzA1MX0.Z8RcUx2sL9b5fFW00tetzaq41pGx7A0uqnLqL4yOXj8";
+(function () {
+  'use strict';
 
-const DEMO_MODE = new URLSearchParams(window.location.search).get('demo') === '1';
-window.LOTO_DEMO_MODE = DEMO_MODE;
+  const demoMode = new URLSearchParams(window.location.search).get('demo') === '1';
+  window.LOTO_DEMO_MODE = demoMode;
 
-if (DEMO_MODE) {
+  if (window.lotoDesktop?.isDesktop) {
+    // La UI nunca recibe claves de nube ni acceso directo a Supabase.
+    window.supabase = null;
+    console.log('✅ Windows: nube aislada en Electron; UI conectada a SQLite local.');
+    return;
+  }
+
+  // La rama windows-desktop-v1 está diseñada para ejecución de escritorio.
+  // Conservamos el modo web sólo como demo local para no depender de CDN remotos.
   window.supabase = null;
-  console.warn('🧪 MODO DEMO: Supabase desactivado. Los datos permanecen sólo en este equipo/navegador.');
-} else if (typeof globalThis.supabase !== 'undefined' && typeof globalThis.supabase.createClient === 'function') {
-  window.supabase = globalThis.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  console.log('✅ Supabase conectado correctamente');
-} else {
-  window.supabase = null;
-  console.warn('⚠️ SDK de Supabase no disponible. Se iniciará con la copia local y se mantendrá en modo consulta hasta recuperar conexión.');
-}
+  if (!demoMode) {
+    console.warn('ℹ️ Esta rama usa Supabase únicamente desde la aplicación de Windows. Modo web local activo.');
+  }
+})();
