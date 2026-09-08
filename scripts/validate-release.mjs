@@ -60,6 +60,8 @@ for (const durabilitySetting of [
   "synchronous = FULL",
   'storage:set-sync',
   'sync:enqueue-sync',
+  'storage:commit-collection-sync',
+  'db.transaction',
   'UNIQUE(entity, record_id)'
 ]) {
   if (!main.includes(durabilitySetting)) throw new Error(`Persistencia durable incompleta: ${durabilitySetting}`);
@@ -67,12 +69,19 @@ for (const durabilitySetting of [
 if (!main.includes('loto-games.db')) throw new Error('SQLite local no configurado');
 
 const preload = read('electron/preload.cjs');
-for (const bridge of ['setSync', 'enqueueSync', 'loadAll']) {
+for (const bridge of ['setSync', 'enqueueSync', 'loadAll', 'commitCollectionSync']) {
   if (!preload.includes(bridge)) throw new Error(`Preload sin puente durable requerido: ${bridge}`);
 }
 
 const storage = read('js/desktop-storage.js');
-for (const contract of ['applyRemoteCollection', 'persistSetSync', 'enqueueSync']) {
+for (const contract of [
+  'applyRemoteCollection',
+  'persistSetSync',
+  'enqueueSync',
+  'buildCollectionDiff',
+  'commitManagedCollectionSync',
+  'desktop.storage.commitCollectionSync'
+]) {
   if (!storage.includes(contract)) throw new Error(`Contrato de persistencia incompleto: ${contract}`);
 }
 
@@ -119,4 +128,4 @@ if (!pkg.build?.asarUnpack?.some?.(entry => String(entry).includes('better-sqlit
   throw new Error('better-sqlite3 debe quedar desempaquetado del ASAR');
 }
 
-console.log('✅ Release checks OK: offline, SQLite durable, sync bidireccional, cloud auth, RLS y empaquetado');
+console.log('✅ Release checks OK: offline, SQLite durable, cola transaccional, sync bidireccional, cloud auth, RLS y empaquetado');
