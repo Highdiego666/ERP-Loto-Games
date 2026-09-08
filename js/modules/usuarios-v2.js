@@ -160,6 +160,28 @@
     if (password && password.length < 6) return alert('La contraseña debe tener al menos 6 caracteres.');
     if (pin && !/^\d{4,6}$/.test(pin)) return alert('El PIN debe tener entre 4 y 6 dígitos.');
 
+    const duplicateEmail = usuariosV2.some(u =>
+      String(u.id) !== String(id || '') &&
+      String(u.email || '').trim().toLowerCase() === email
+    );
+    if (duplicateEmail) return alert('Ya existe otro usuario con ese correo.');
+
+    if (id) {
+      const original = usuariosV2.find(u => String(u.id) === String(id));
+      const wasActiveAdmin = original?.rol === 'admin' && (original?.estado || 'activo') === 'activo';
+      const willBeActiveAdmin = rol === 'admin' && estado === 'activo';
+      if (wasActiveAdmin && !willBeActiveAdmin) {
+        const otherActiveAdmins = usuariosV2.filter(u =>
+          String(u.id) !== String(id) &&
+          u.rol === 'admin' &&
+          (u.estado || 'activo') === 'activo'
+        );
+        if (otherActiveAdmins.length === 0) {
+          return alert('Debe existir al menos un administrador activo. Crea o activa otro administrador antes de cambiar este usuario.');
+        }
+      }
+    }
+
     try {
       const data = { nombre, email, rol, estado, privilegios: rol === 'admin' ? [] : selectedPrivileges() };
       if (password) Object.assign(data, await window.AuthV2.createPassword(password));
