@@ -2,6 +2,13 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const Database = require('better-sqlite3');
+const {
+  setupUpdater,
+  stopUpdater,
+  checkForUpdates,
+  installUpdate,
+  getUpdateState
+} = require('./updater.cjs');
 
 let db;
 let dataDir;
@@ -143,9 +150,13 @@ function replySync(event, fn) {
   }
 }
 
+function backupDirPath() {
+  return path.join(app.getPath('userData'), 'backups');
+}
+
 function createBackupIfNeeded() {
-  if (!db || !dbPath || !fs.existsSync(dbPath)) return;
-  const backupDir = path.join(app.getPath('userData'), 'backups');
+  if (!db || !dbPath || !fs.existsSync(dbPath)) return false;
+  const backupDir = backupDirPath();
   fs.mkdirSync(backupDir, { recursive: true });
   const day = new Date().toISOString().slice(0, 10);
   const target = path.join(backupDir, `loto-games-${day}.db`);
@@ -160,6 +171,29 @@ function createBackupIfNeeded() {
   for (const old of files.slice(30)) {
     fs.rmSync(path.join(backupDir, old), { force: true });
   }
+  return target;
+}
+
+function createPreUpdateBackup(version = 'desconocida') {
+  if (!db || !dbPath || !fs.existsSync(dbPath)) return false;
+  const backupDir = backupDirPath();
+  fs.mkdirSync(backupDir, { recursive: true });
+  const safeVersion = String(version || 'desconocida').replace(/[^0-9A-Za-z._-]/g, '_');
+  const target = path.join(backupDir, `loto-games-pre-update-${safeVersion}.db`);
+
+  if (!fs.existsSync(target)) {
+    db.pragma('wal_checkpoint(TRUNCATE)');
+    fs.copyFileSync(dbPath, target);
+  }
+
+  const files = fs.readdirSync(backupDir)
+    .filter(name => /^loto-games-pre-update-.*\.db$/.test(name))
+    .map(name => ({ name, mtime: fs.statSync(path.join(backupDir, name)).mtimeMs }))
+    .sort((a, b) => b.mtime - a.mtime);
+  for (const old of files.slice(10)) {
+    fs.rmSync(path.join(backupDir, old.name), { force: true });
+  }
+  return target;
 }
 
 function registerIpc() {
@@ -204,6 +238,13 @@ function registerIpc() {
     return true;
   });
 
+  ipcMain.handle('update:status', () => getUpdateState());
+  ipcMain.handle('update:check', () => checkForUpdates());
+  ipcMain.handle('update:install', async () => {
+    createBackupIfNeeded();
+    return installUpdate();
+  });
+
   ipcMain.handle('backup:create', () => {
     createBackupIfNeeded();
     return true;
@@ -212,7 +253,8 @@ function registerIpc() {
   ipcMain.handle('app:paths', () => ({
     userData: app.getPath('userData'),
     database: dbPath,
-    backups: path.join(app.getPath('userData'), 'backups')
+    backups: backupDirPath(),
+    version: app.getVersion()
   }));
 }
 
@@ -248,6 +290,8 @@ app.whenReady().then(() => {
   createBackupIfNeeded();
   registerIpc();
   createWindow();
+  setupUpdater({ backupBeforeInstall: createPreUpdateBackup });
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
@@ -259,6 +303,7 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   try {
+    stopUpdater();
     createBackupIfNeeded();
     db?.close();
   } catch (error) {
