@@ -10,6 +10,7 @@
   const desktop = window.lotoDesktop;
   if (!desktop?.isDesktop) return;
 
+  const AUDIT_ENTITY = 'auditoria_modificaciones';
   const MANAGED_COLLECTIONS = new Set([
     'productos',
     'ventas',
@@ -18,14 +19,18 @@
     'servicios',
     'traspasos',
     'cuentas_plaza_movimientos',
-    'movimientos_inventario'
+    'movimientos_inventario',
+    AUDIT_ENTITY
+  ]);
+  const AUDITED_COLLECTIONS = new Set([...MANAGED_COLLECTIONS].filter(key => key !== AUDIT_ENTITY));
+  const SENSITIVE_AUDIT_FIELDS = new Set([
+    'password', 'pin', 'password_hash', 'password_salt', 'pin_hash', 'pin_salt'
   ]);
 
   const storageProto = Storage.prototype;
   const nativeGet = storageProto.getItem;
   const nativeSet = storageProto.setItem;
   const nativeRemove = storageProto.removeItem;
-  const nativeClear = storageProto.clear;
 
   function parseArray(raw) {
     if (!raw) return [];
@@ -60,14 +65,6 @@
       return;
     }
     desktop.storage.remove(key).catch(error => console.error('SQLite remove falló:', error));
-  }
-
-  function persistClearSync() {
-    if (typeof desktop.storage.clearSync === 'function') {
-      desktop.storage.clearSync();
-      return;
-    }
-    desktop.storage.clear().catch(error => console.error('SQLite clear falló:', error));
   }
 
   function enqueueSync(job) {
@@ -110,12 +107,124 @@
     }
   }
 
+  function currentActor() {
+    const user = window.getUsuarioActual?.() || window.usuarioActual || window.AuthV2?.getSession?.();
+    if (!user?.id) return null;
+    return {
+      id: String(user.id),
+      nombre: String(user.nombre || 'Usuario'),
+      email: String(user.email || '').trim().toLowerCase(),
+      rol: String(user.rol || '')
+    };
+  }
+
+  function safeAuditValue(key, value, mode = 'snapshot') {
+    if (!SENSITIVE_AUDIT_FIELDS.has(key)) return value;
+    if (value === null || value === undefined || value === '') return null;
+    return mode === 'after' ? '[actualizada]' : '[protegida]';
+  }
+
+  function sanitizeRecord(record, mode = 'snapshot') {
+    if (!record || typeof record !== 'object') return {};
+    return Object.fromEntries(
+      Object.entries(record).map(([key, value]) => [key, safeAuditValue(key, value, mode)])
+    );
+  }
+
+  function buildChangedSnapshot(previous, next) {
+    const keys = new Set([...Object.keys(previous || {}), ...Object.keys(next || {})]);
+    const campos = [];
+    const antes = {};
+    const despues = {};
+
+    for (const key of keys) {
+      const oldValue = previous?.[key];
+      const newValue = next?.[key];
+      if (JSON.stringify(oldValue) === JSON.stringify(newValue)) continue;
+      campos.push(key);
+      antes[key] = safeAuditValue(key, oldValue, 'before');
+      despues[key] = safeAuditValue(key, newValue, 'after');
+    }
+
+    return { campos, antes, despues };
+  }
+
+  let fallbackAuditSequence = 0;
+  function auditId() {
+    if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+    fallbackAuditSequence = (fallbackAuditSequence + 1) % 100000;
+    return `audit-${Date.now()}-${fallbackAuditSequence}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  function buildAuditEntries(entity, previousRaw, nextRaw) {
+    if (!AUDITED_COLLECTIONS.has(entity)) return [];
+    const actor = currentActor();
+    if (!actor) return [];
+
+    const before = byId(parseArray(previousRaw));
+    const after = byId(parseArray(nextRaw));
+    const fecha = new Date().toISOString();
+    const entries = [];
+
+    for (const [id, record] of after) {
+      const previous = before.get(id);
+      if (!previous) {
+        const despues = sanitizeRecord(record, 'after');
+        entries.push({
+          id: auditId(), entidad: entity, registro_id: id, accion: 'crear',
+          usuario_id: actor.id, usuario_nombre: actor.nombre, usuario_email: actor.email,
+          usuario_rol: actor.rol, fecha,
+          cambios: { campos: Object.keys(despues), antes: {}, despues },
+          created_at: fecha
+        });
+        continue;
+      }
+
+      if (JSON.stringify(previous) !== JSON.stringify(record)) {
+        const cambios = buildChangedSnapshot(previous, record);
+        entries.push({
+          id: auditId(), entidad: entity, registro_id: id, accion: 'editar',
+          usuario_id: actor.id, usuario_nombre: actor.nombre, usuario_email: actor.email,
+          usuario_rol: actor.rol, fecha, cambios, created_at: fecha
+        });
+      }
+    }
+
+    for (const [id, previous] of before) {
+      if (after.has(id)) continue;
+      const antes = sanitizeRecord(previous, 'before');
+      entries.push({
+        id: auditId(), entidad: entity, registro_id: id, accion: 'eliminar',
+        usuario_id: actor.id, usuario_nombre: actor.nombre, usuario_email: actor.email,
+        usuario_rol: actor.rol, fecha,
+        cambios: { campos: Object.keys(antes), antes, despues: {} },
+        created_at: fecha
+      });
+    }
+
+    return entries;
+  }
+
   function commitManagedCollectionSync(entity, value, previousRaw) {
     if (typeof desktop.storage.commitCollectionSync !== 'function') {
       throw new Error('Preload incompatible: falta el commit transaccional de Loto Games');
     }
+
     const jobs = buildCollectionDiff(entity, previousRaw, value);
-    desktop.storage.commitCollectionSync(entity, value, jobs);
+    const auditEntries = buildAuditEntries(entity, previousRaw, value);
+    let auditValue = null;
+    let auditJobs = [];
+
+    if (auditEntries.length) {
+      const previousAuditRaw = nativeGet.call(window.localStorage, AUDIT_ENTITY);
+      const auditRows = parseArray(previousAuditRaw);
+      auditRows.push(...auditEntries);
+      auditValue = JSON.stringify(auditRows);
+      auditJobs = buildCollectionDiff(AUDIT_ENTITY, previousAuditRaw, auditValue);
+    }
+
+    desktop.storage.commitCollectionSync(entity, value, jobs, auditValue, auditJobs);
+    if (auditValue !== null) nativeSet.call(window.localStorage, AUDIT_ENTITY, auditValue);
   }
 
   // SQLite es la referencia persistente al iniciar la aplicación.
@@ -135,8 +244,8 @@
       if (key === null || value === null) continue;
 
       if (MANAGED_COLLECTIONS.has(key)) {
-        // Si esta instalación viene de una versión anterior basada solo en
-        // localStorage, importamos también sus cambios a la cola antes del primer pull.
+        // En esta fase todavía no existe una sesión AuthV2 cargada, por lo que
+        // una importación histórica no crea falsos registros de auditoría.
         commitManagedCollectionSync(key, value, null);
       } else {
         persistSetSync(key, value);
@@ -157,8 +266,6 @@
       if (MANAGED_COLLECTIONS.has(k)) commitManagedCollectionSync(k, v, previous);
       else persistSetSync(k, v);
     } catch (error) {
-      // Si SQLite o la cola fallan, restauramos localStorage para no reportar un
-      // guardado que no haya quedado durable y sincronizable.
       if (previous === null) nativeRemove.call(this, k);
       else nativeSet.call(this, k, previous);
       throw error;
@@ -169,41 +276,25 @@
     if (this !== window.localStorage) return nativeRemove.call(this, key);
 
     const k = String(key);
+    if (k === AUDIT_ENTITY) {
+      throw new Error('El historial de auditoría no se puede eliminar desde la aplicación');
+    }
+
     const previous = nativeGet.call(this, k);
     nativeRemove.call(this, k);
 
     try {
-      persistRemoveSync(k);
+      if (MANAGED_COLLECTIONS.has(k)) commitManagedCollectionSync(k, '[]', previous);
+      else persistRemoveSync(k);
     } catch (error) {
       if (previous !== null) nativeSet.call(this, k, previous);
       throw error;
     }
-
-    if (MANAGED_COLLECTIONS.has(k)) queueCollectionDiff(k, previous, '[]');
   };
 
   storageProto.clear = function () {
-    if (this !== window.localStorage) return nativeClear.call(this);
-
-    const snapshot = {};
-    for (let i = 0; i < this.length; i += 1) {
-      const key = this.key(i);
-      if (key !== null) snapshot[key] = nativeGet.call(this, key);
-    }
-
-    nativeClear.call(this);
-    try {
-      persistClearSync();
-    } catch (error) {
-      for (const [key, value] of Object.entries(snapshot)) {
-        if (value !== null) nativeSet.call(this, key, value);
-      }
-      throw error;
-    }
-
-    for (const key of MANAGED_COLLECTIONS) {
-      queueCollectionDiff(key, snapshot[key], '[]');
-    }
+    if (this !== window.localStorage) return Storage.prototype.clear.call(this);
+    throw new Error('El borrado global del almacenamiento está bloqueado para proteger datos y auditoría');
   };
 
   function applyRemoteCollection(entity, records) {
@@ -216,7 +307,7 @@
     const previous = nativeGet.call(window.localStorage, entity);
     if (previous === nextRaw) return false;
 
-    // Importante: esta ruta NO usa localStorage.setItem(), para no reencolar como cambios locales.
+    // Importante: esta ruta NO usa localStorage.setItem(), para no reencolar ni auditar un pull remoto.
     nativeSet.call(window.localStorage, entity, nextRaw);
     try {
       persistSetSync(entity, nextRaw);
@@ -241,5 +332,5 @@
     }
   };
 
-  console.log('✅ SQLite local + cola de sincronización transaccional activos');
+  console.log('✅ SQLite local + cola transaccional + auditoría de usuario activos');
 })();
