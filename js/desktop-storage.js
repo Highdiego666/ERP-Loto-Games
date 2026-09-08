@@ -78,8 +78,7 @@
         desktop.sync.enqueue(job).catch(error => console.warn('No se pudo encolar sincronización:', error));
       }
     } catch (error) {
-      console.warn('No se pudo encolar para nube:', error);
-      throw error;
+      console.warn('Dato local guardado, pero no se pudo encolar para nube:', error);
     }
   }
 
@@ -112,16 +111,11 @@
   }
 
   function commitManagedCollectionSync(entity, value, previousRaw) {
-    const jobs = buildCollectionDiff(entity, previousRaw, value);
-    if (typeof desktop.storage.commitCollectionSync === 'function') {
-      desktop.storage.commitCollectionSync(entity, value, jobs);
-      return;
+    if (typeof desktop.storage.commitCollectionSync !== 'function') {
+      throw new Error('Preload incompatible: falta el commit transaccional de Loto Games');
     }
-
-    // Compatibilidad defensiva con un preload antiguo. La release actual siempre
-    // usa commitCollectionSync para que kv_store + sync_queue sean atómicos.
-    persistSetSync(entity, value);
-    for (const job of jobs) enqueueSync(job);
+    const jobs = buildCollectionDiff(entity, previousRaw, value);
+    desktop.storage.commitCollectionSync(entity, value, jobs);
   }
 
   // SQLite es la referencia persistente al iniciar la aplicación.
