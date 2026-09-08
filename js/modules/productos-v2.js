@@ -157,10 +157,13 @@
     if ([data.precio_cliente,data.precio_mayorista,data.precio_plaza].some(v => !Number.isFinite(v) || v < 0)) return alert('Revisa los tres precios.');
 
     try {
-      if (id) await window.DB.updateProducto(id, data);
-      else {
+      if (id) {
+        const updated = await window.DB.updateProducto(id, data);
+        if (updated === false) throw new Error('El producto ya no existe en la copia local. Recarga y vuelve a intentarlo.');
+      } else {
         const sku = `LOT-${Math.random().toString(36).slice(2,8).toUpperCase()}`;
-        await window.DB.saveProducto({ ...data, sku, codigoBarras: sku });
+        const saved = await window.DB.saveProducto({ ...data, sku, codigoBarras: sku });
+        if (!saved?.id) throw new Error('No se recibió confirmación del producto guardado.');
       }
       window.cerrarModalProducto();
       await window.cargarProductos();
