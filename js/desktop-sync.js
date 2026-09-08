@@ -10,6 +10,7 @@
   const desktop = window.lotoDesktop;
   if (!desktop?.isDesktop) return;
 
+  const AUDIT_ENTITY = 'auditoria_modificaciones';
   const TABLES = {
     productos: 'productos',
     ventas: 'ventas',
@@ -18,7 +19,8 @@
     servicios: 'servicios_tecnicos',
     traspasos: 'traspasos',
     cuentas_plaza_movimientos: 'cuentas_plaza_movimientos',
-    movimientos_inventario: 'movimientos_inventario'
+    movimientos_inventario: 'movimientos_inventario',
+    auditoria_modificaciones: 'auditoria_modificaciones'
   };
 
   const ALLOWED = {
@@ -30,7 +32,8 @@
     servicios: ['id','cliente_id','equipo','problema','diagnostico','precio','estado','garantia_dias','created_at','cliente_nombre','tecnico_asignado','entregado_por'],
     traspasos: ['id','producto_id','producto_nombre','tipo','cantidad','motivo','usuario','fecha','created_at','local_origen','local_destino','locatario_nombre','locatario_telefono','monto','estado_pago','fecha_pago','producto_sku','origen','destino','estado'],
     cuentas_plaza_movimientos: ['id','cliente_id','cliente_nombre','tipo','monto','items','venta_id','nota','usuario','fecha','created_at'],
-    movimientos_inventario: ['id','producto_id','producto_nombre','tipo','cantidad','stock_anterior','stock_nuevo','motivo','usuario','fecha']
+    movimientos_inventario: ['id','producto_id','producto_nombre','tipo','cantidad','stock_anterior','stock_nuevo','motivo','usuario','fecha'],
+    auditoria_modificaciones: ['id','entidad','registro_id','accion','usuario_id','usuario_nombre','usuario_email','usuario_rol','fecha','cambios','created_at']
   };
 
   const aliases = {
@@ -135,7 +138,18 @@
         }
 
         try {
-          if (job.operation === 'delete') {
+          if (job.entity === AUDIT_ENTITY) {
+            if (job.operation === 'delete') {
+              throw new Error('La auditoría es append-only y no admite eliminaciones');
+            }
+            const raw = JSON.parse(job.payload || '{}');
+            const payload = normalize(job.entity, raw);
+            if (!payload.id) payload.id = String(job.record_id);
+            const { error } = await client.from(table).insert(payload);
+            // Si el servidor sí recibió el insert pero la respuesta se perdió, el
+            // reintento puede encontrar la misma PK. Eso cuenta como éxito idempotente.
+            if (error && error.code !== '23505') throw error;
+          } else if (job.operation === 'delete') {
             const { error } = await client.from(table).delete().eq('id', job.record_id);
             if (error) throw error;
           } else {
@@ -171,8 +185,6 @@
       ? { users: authorizedUsers }
       : await authorizeCloud(client);
 
-    // Descarga todas las colecciones antes de modificar el estado local para evitar
-    // una restauración parcial si una tabla remota falla a mitad del proceso.
     const snapshots = { usuarios: authorization.users };
     for (const entity of Object.keys(TABLES)) {
       if (entity === 'usuarios') continue;
@@ -208,17 +220,12 @@
       if (initialPending.length) setStatus('checking', 'Sincronizando cambios…');
       const pushed = await pushPending(client);
 
-      // Nunca hacemos pull si quedó algo pendiente: así evitamos sobrescribir una
-      // modificación local que todavía no alcanzó Supabase.
       const remaining = await desktop.sync.pending(1);
       if (remaining.length) {
         setStatus('local', 'Local · cambios pendientes');
         return { ok: false, pushed, pending: true };
       }
 
-      // Se autoriza y descarga de nuevo DESPUÉS del push. Esto es intencional:
-      // una edición de rol/estado/privilegios en usuarios debe volver desde una
-      // fotografía fresca de Supabase y nunca desde la lista previa al cambio.
       const pulled = await pullCloudSnapshot(client);
       setStatus('ok', 'Local + nube · sincronizado');
       return { ok: true, pushed, pulled };
@@ -232,9 +239,6 @@
   }
 
   function syncOnce() {
-    // Si login, reconexión e intervalo disparan sync al mismo tiempo, todos esperan
-    // exactamente la misma ejecución. Así el bootstrap nunca falla por un "skip"
-    // producido por su propia sesión de Auth.
     if (currentSync) return currentSync;
     currentSync = performSync().finally(() => {
       currentSync = null;
