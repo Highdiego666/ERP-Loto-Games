@@ -1,56 +1,60 @@
-name: Windows release check
+name: Windows candidate build
 
 on:
   push:
-    branches: [release/windows-offline-first]
-  pull_request:
-    branches: [main]
+    branches: [vnext/windows-release]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   validate-and-build:
     runs-on: windows-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
+    timeout-minutes: 35
 
-      - uses: actions/setup-node@v4
+    steps:
+      - name: Checkout candidate branch
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: npm
 
-      - name: Install dependencies
+      - name: Install locked dependencies
         shell: pwsh
-        run: npm install --ignore-scripts
+        run: npm ci
 
-      - name: Rebuild native Electron dependency
+      - name: Mark candidate as 0.9.0
         shell: pwsh
-        run: npx electron-builder install-app-deps
+        run: npm version 0.9.0 --no-git-tag-version
 
-      - name: Copy offline vendor assets
-        shell: pwsh
-        run: npm run vendor
-
-      - name: Validate JavaScript syntax
+      - name: Validate application
         shell: pwsh
         run: |
+          npm run vendor
           $files = Get-ChildItem js,electron,scripts -Recurse -File | Where-Object { $_.Extension -in '.js','.cjs','.mjs' }
           foreach ($file in $files) {
             node --check $file.FullName
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
+          node scripts/validate-release.mjs
 
-      - name: Validate release contract
-        shell: pwsh
-        run: node scripts/validate-release.mjs
-
-      - name: Build NSIS installer
+      - name: Build NSIS candidate installer
         shell: pwsh
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: npx electron-builder --win nsis --x64 --publish never
 
-      - name: Upload installer
+      - name: Upload Windows candidate
         uses: actions/upload-artifact@v4
         with:
-          name: LotoGames-Windows-x64
-          path: dist/*.exe
+          name: LotoGames-0.9.0-Windows-x64-candidate
+          path: |
+            dist/*.exe
+            dist/*.yml
+            dist/*.blockmap
           if-no-files-found: error
+          retention-days: 14
