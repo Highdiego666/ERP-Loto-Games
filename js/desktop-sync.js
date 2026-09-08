@@ -202,7 +202,7 @@
 
     try {
       setStatus('checking', 'Verificando nube…');
-      const authorization = await authorizeCloud(client);
+      await authorizeCloud(client);
 
       const initialPending = await desktop.sync.pending(1);
       if (initialPending.length) setStatus('checking', 'Sincronizando cambios…');
@@ -216,9 +216,12 @@
         return { ok: false, pushed, pending: true };
       }
 
-      const pulled = await pullCloudSnapshot(client, authorization.users);
+      // Se autoriza y descarga de nuevo DESPUÉS del push. Esto es intencional:
+      // una edición de rol/estado/privilegios en usuarios debe volver desde una
+      // fotografía fresca de Supabase y nunca desde la lista previa al cambio.
+      const pulled = await pullCloudSnapshot(client);
       setStatus('ok', 'Local + nube · sincronizado');
-      return { ok: true, pushed, pulled, cloudUser: authorization.current };
+      return { ok: true, pushed, pulled };
     } catch (error) {
       console.warn('Sincronización pendiente:', error);
       const message = error?.message || String(error);
