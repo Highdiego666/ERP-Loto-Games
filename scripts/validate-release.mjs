@@ -218,7 +218,9 @@ if (!pkg.build?.asarUnpack?.some?.(entry => String(entry).includes('better-sqlit
   throw new Error('better-sqlite3 debe quedar desempaquetado del ASAR');
 }
 
-const releaseWorkflow = read(WINDOWS_RELEASE_WORKFLOW);
+// Git en Windows puede materializar workflows con CRLF; normalizamos para que
+// la validación del contrato sea idéntica en Linux y en windows-latest.
+const releaseWorkflow = read(WINDOWS_RELEASE_WORKFLOW).replace(/\r\n/g, '\n');
 for (const contract of [
   "tags:\n      - 'v*'",
   'permissions:\n  contents: write',
