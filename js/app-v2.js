@@ -30,6 +30,13 @@
     tecnico: ['dashboard', 'servicios', 'productos', 'inventario', 'clientes']
   };
 
+  const nombresRol = {
+    admin: 'Administrador',
+    soporte: 'Soporte',
+    vendedor: 'Vendedor',
+    tecnico: 'Técnico'
+  };
+
   function normalizarPrivilegios(usuario) {
     return window.AuthV2?.normalizePrivileges(usuario?.privilegios) || [];
   }
@@ -183,8 +190,9 @@
 
     const userName = document.getElementById('userNameSidebar');
     const userRole = document.getElementById('userRoleSidebar');
-    if (userName) userName.textContent = usuario.nombre || 'Usuario';
-    if (userRole) userRole.textContent = usuario.rol || '';
+    const rolVisible = nombresRol[usuario.rol] || usuario.rol || 'Sin rol';
+    if (userName) userName.textContent = `Nombre: ${usuario.nombre || 'Usuario'}`;
+    if (userRole) userRole.textContent = `Rol: ${rolVisible}`;
     construirMenu(usuario);
     await actualizarEstadoDB();
 
