@@ -9,6 +9,7 @@ const exists = rel => fs.existsSync(path.join(root, rel));
 const BIGINT_MIGRATION = 'supabase/migrations/20260904003156_widen_ids_for_offline_sync.sql';
 const RLS_MIGRATION = 'supabase/migrations/20260908054255_secure_cloud_sync_rls_reconcile.sql';
 const AUDIT_MIGRATION = 'supabase/migrations/20260908064307_auditoria_modificaciones_append_only.sql';
+const WINDOWS_RELEASE_WORKFLOW = '.github/workflows/windows-publish-release.yml';
 
 const required = [
   'index.html',
@@ -16,15 +17,18 @@ const required = [
   'assets/img/loto-games-logo.svg',
   'electron/main.cjs',
   'electron/preload.cjs',
+  'electron/updater.cjs',
   'js/desktop-storage.js',
   'js/desktop-sync.js',
   'js/cloud-auth.js',
+  'js/update-v1.js',
   'js/supabase-client.js',
   'js/utils/audit-v1.js',
   'js/modules/reportes-v2.js',
   BIGINT_MIGRATION,
   RLS_MIGRATION,
   AUDIT_MIGRATION,
+  WINDOWS_RELEASE_WORKFLOW,
   'vendor/chart.umd.js',
   'vendor/JsBarcode.all.min.js',
   'vendor/supabase.js',
@@ -45,6 +49,7 @@ if (!html.includes('js/desktop-storage.js')) throw new Error('Persistencia local
 if (!html.includes('js/desktop-sync.js')) throw new Error('Motor de sincronización no está cargado');
 if (!html.includes('js/cloud-auth.js')) throw new Error('Vinculación segura de nube no está cargada');
 if (!html.includes('js/utils/audit-v1.js')) throw new Error('Auditoría no está cargada');
+if (!html.includes('js/update-v1.js')) throw new Error('Indicador de actualizaciones no está cargado');
 
 const supabaseClient = read('js/supabase-client.js');
 if (supabaseClient.includes('SUPABASE_ANON_KEY')) throw new Error('Se detectó clave anon heredada');
@@ -76,10 +81,41 @@ if (!main.includes('loto-games.db')) throw new Error('SQLite local no configurad
 if (!main.includes('La auditoría de Loto Games es append-only')) {
   throw new Error('La auditoría local debe bloquear eliminaciones');
 }
+for (const updateContract of [
+  'setupUpdater',
+  'createPreUpdateBackup',
+  "ipcMain.handle('update:status'",
+  "ipcMain.handle('update:check'",
+  "ipcMain.handle('update:install'"
+]) {
+  if (!main.includes(updateContract)) throw new Error(`Actualizador principal incompleto: ${updateContract}`);
+}
 
 const preload = read('electron/preload.cjs');
 for (const bridge of ['setSync', 'enqueueSync', 'loadAll', 'commitCollectionSync', 'auditValue', 'auditJobs']) {
   if (!preload.includes(bridge)) throw new Error(`Preload sin puente durable requerido: ${bridge}`);
+}
+for (const bridge of ['update:status', 'update:check', 'update:install', 'onStatus']) {
+  if (!preload.includes(bridge)) throw new Error(`Preload sin puente de actualización: ${bridge}`);
+}
+
+const updater = read('electron/updater.cjs');
+for (const contract of [
+  "require('electron-updater')",
+  'app.isPackaged',
+  "process.platform === 'win32'",
+  'autoDownload = true',
+  'autoInstallOnAppQuit = true',
+  "updater.on('update-downloaded'",
+  'backupBeforeInstall',
+  'quitAndInstall'
+]) {
+  if (!updater.includes(contract)) throw new Error(`Motor de actualización incompleto: ${contract}`);
+}
+
+const updateUi = read('js/update-v1.js');
+for (const contract of ['desktop.update.status()', 'desktop.update.check()', 'desktop.update.install()', "window.addEventListener('online'"]) {
+  if (!updateUi.includes(contract)) throw new Error(`Interfaz de actualización incompleta: ${contract}`);
 }
 
 const storage = read('js/desktop-storage.js');
@@ -166,6 +202,12 @@ for (const contract of [
 }
 
 const pkg = JSON.parse(read('package.json'));
+if (pkg.dependencies?.['electron-updater'] !== '6.8.9') {
+  throw new Error('electron-updater debe quedar fijado en una versión estable reproducible');
+}
+if (pkg.build?.publish?.[0]?.provider !== 'github' || pkg.build?.publish?.[0]?.owner !== 'Highdiego666' || pkg.build?.publish?.[0]?.repo !== 'ERP-Loto-Games') {
+  throw new Error('Proveedor GitHub de autoactualizaciones incompleto');
+}
 if (pkg.build?.nsis?.deleteAppDataOnUninstall !== false) {
   throw new Error('El desinstalador no debe borrar automáticamente los datos del negocio');
 }
@@ -176,4 +218,17 @@ if (!pkg.build?.asarUnpack?.some?.(entry => String(entry).includes('better-sqlit
   throw new Error('better-sqlite3 debe quedar desempaquetado del ASAR');
 }
 
-console.log('✅ Release checks OK: offline, SQLite durable, cola transaccional, auditoría append-only, sync bidireccional, cloud auth, RLS y empaquetado');
+const releaseWorkflow = read(WINDOWS_RELEASE_WORKFLOW);
+for (const contract of [
+  "tags:\n      - 'v*'",
+  'permissions:\n  contents: write',
+  'npm ci',
+  '--publish always',
+  'GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}',
+  'dist/*.yml',
+  'dist/*.blockmap'
+]) {
+  if (!releaseWorkflow.includes(contract)) throw new Error(`Workflow de release Windows incompleto: ${contract}`);
+}
+
+console.log('✅ Release checks OK: offline, SQLite durable, cola transaccional, auditoría append-only, sync bidireccional, autoactualización Windows, cloud auth, RLS y empaquetado');
