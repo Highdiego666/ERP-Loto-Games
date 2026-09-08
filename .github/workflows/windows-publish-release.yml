@@ -1,0 +1,66 @@
+name: Publish Windows release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  publish-windows:
+    runs-on: windows-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Verify tag matches package version
+        shell: pwsh
+        run: |
+          $version = node -p "require('./package.json').version"
+          $expected = "v$version"
+          if ("${{ github.ref_name }}" -ne $expected) {
+            Write-Error "El tag ${{ github.ref_name }} no coincide con package.json ($expected)"
+            exit 1
+          }
+
+      - name: Install locked dependencies
+        shell: pwsh
+        run: npm ci
+
+      - name: Validate application
+        shell: pwsh
+        run: |
+          npm run vendor
+          $files = Get-ChildItem js,electron,scripts -Recurse -File | Where-Object { $_.Extension -in '.js','.cjs','.mjs' }
+          foreach ($file in $files) {
+            node --check $file.FullName
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          node scripts/validate-release.mjs
+
+      - name: Build and publish NSIS release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npx electron-builder --win nsis --x64 --publish always
+
+      - name: Keep release artifacts in Actions
+        uses: actions/upload-artifact@v4
+        with:
+          name: LotoGames-${{ github.ref_name }}-Windows-x64
+          path: |
+            dist/*.exe
+            dist/*.yml
+            dist/*.blockmap
+          if-no-files-found: error
