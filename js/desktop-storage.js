@@ -31,6 +31,7 @@
   const nativeGet = storageProto.getItem;
   const nativeSet = storageProto.setItem;
   const nativeRemove = storageProto.removeItem;
+  const nativeClear = storageProto.clear;
 
   function parseArray(raw) {
     if (!raw) return [];
@@ -227,8 +228,6 @@
     if (auditValue !== null) nativeSet.call(window.localStorage, AUDIT_ENTITY, auditValue);
   }
 
-  // SQLite es la referencia persistente al iniciar la aplicación.
-  // En una primera ejecución sin SQLite, importamos cualquier perfil local existente.
   const sqliteSnapshot = desktop.storage.loadAll() || {};
   const sqliteKeys = Object.keys(sqliteSnapshot);
 
@@ -244,8 +243,6 @@
       if (key === null || value === null) continue;
 
       if (MANAGED_COLLECTIONS.has(key)) {
-        // En esta fase todavía no existe una sesión AuthV2 cargada, por lo que
-        // una importación histórica no crea falsos registros de auditoría.
         commitManagedCollectionSync(key, value, null);
       } else {
         persistSetSync(key, value);
@@ -293,7 +290,7 @@
   };
 
   storageProto.clear = function () {
-    if (this !== window.localStorage) return Storage.prototype.clear.call(this);
+    if (this !== window.localStorage) return nativeClear.call(this);
     throw new Error('El borrado global del almacenamiento está bloqueado para proteger datos y auditoría');
   };
 
@@ -307,7 +304,6 @@
     const previous = nativeGet.call(window.localStorage, entity);
     if (previous === nextRaw) return false;
 
-    // Importante: esta ruta NO usa localStorage.setItem(), para no reencolar ni auditar un pull remoto.
     nativeSet.call(window.localStorage, entity, nextRaw);
     try {
       persistSetSync(entity, nextRaw);
