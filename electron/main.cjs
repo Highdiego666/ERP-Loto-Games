@@ -94,6 +94,27 @@ function enqueueJob(job) {
   return true;
 }
 
+function commitCollection(key, value, jobs) {
+  const entity = String(key || '');
+  if (!ALLOWED_SYNC_ENTITIES.has(entity)) {
+    throw new Error(`Colección administrada no permitida: ${entity || '(vacía)'}`);
+  }
+  if (!Array.isArray(jobs)) throw new Error('Lista de sincronización inválida');
+
+  const commit = db.transaction(() => {
+    setKv(entity, value);
+    for (const job of jobs) {
+      if (String(job?.entity || '') !== entity) {
+        throw new Error(`Trabajo de sincronización no corresponde a ${entity}`);
+      }
+      enqueueJob(job);
+    }
+  });
+
+  commit();
+  return true;
+}
+
 function replySync(event, fn) {
   try {
     fn();
@@ -135,6 +156,9 @@ function registerIpc() {
   ipcMain.on('storage:set-sync', (event, key, value) => replySync(event, () => setKv(key, value)));
   ipcMain.on('storage:remove-sync', (event, key) => replySync(event, () => removeKv(key)));
   ipcMain.on('storage:clear-sync', event => replySync(event, clearKv));
+  ipcMain.on('storage:commit-collection-sync', (event, key, value, jobs) => {
+    replySync(event, () => commitCollection(key, value, jobs));
+  });
 
   ipcMain.handle('storage:set', (_event, key, value) => setKv(key, value));
   ipcMain.handle('storage:remove', (_event, key) => removeKv(key));
