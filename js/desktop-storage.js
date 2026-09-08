@@ -78,28 +78,50 @@
         desktop.sync.enqueue(job).catch(error => console.warn('No se pudo encolar sincronización:', error));
       }
     } catch (error) {
-      // El dato ya quedó guardado localmente; una falla de cola no debe perder la operación.
-      console.warn('Dato local guardado, pero no se pudo encolar para nube:', error);
+      console.warn('No se pudo encolar para nube:', error);
+      throw error;
     }
   }
 
-  function queueCollectionDiff(entity, previousRaw, nextRaw) {
-    if (!MANAGED_COLLECTIONS.has(entity)) return;
+  function buildCollectionDiff(entity, previousRaw, nextRaw) {
+    if (!MANAGED_COLLECTIONS.has(entity)) return [];
     const before = byId(parseArray(previousRaw));
     const after = byId(parseArray(nextRaw));
+    const jobs = [];
 
     for (const [id, record] of after) {
       const previous = before.get(id);
       if (!previous || JSON.stringify(previous) !== JSON.stringify(record)) {
-        enqueueSync({ entity, recordId: id, operation: 'upsert', payload: record });
+        jobs.push({ entity, recordId: id, operation: 'upsert', payload: record });
       }
     }
 
     for (const id of before.keys()) {
       if (!after.has(id)) {
-        enqueueSync({ entity, recordId: id, operation: 'delete' });
+        jobs.push({ entity, recordId: id, operation: 'delete' });
       }
     }
+
+    return jobs;
+  }
+
+  function queueCollectionDiff(entity, previousRaw, nextRaw) {
+    for (const job of buildCollectionDiff(entity, previousRaw, nextRaw)) {
+      enqueueSync(job);
+    }
+  }
+
+  function commitManagedCollectionSync(entity, value, previousRaw) {
+    const jobs = buildCollectionDiff(entity, previousRaw, value);
+    if (typeof desktop.storage.commitCollectionSync === 'function') {
+      desktop.storage.commitCollectionSync(entity, value, jobs);
+      return;
+    }
+
+    // Compatibilidad defensiva con un preload antiguo. La release actual siempre
+    // usa commitCollectionSync para que kv_store + sync_queue sean atómicos.
+    persistSetSync(entity, value);
+    for (const job of jobs) enqueueSync(job);
   }
 
   // SQLite es la referencia persistente al iniciar la aplicación.
@@ -116,7 +138,15 @@
     for (let i = 0; i < window.localStorage.length; i += 1) {
       const key = window.localStorage.key(i);
       const value = nativeGet.call(window.localStorage, key);
-      if (key !== null && value !== null) persistSetSync(key, value);
+      if (key === null || value === null) continue;
+
+      if (MANAGED_COLLECTIONS.has(key)) {
+        // Si esta instalación viene de una versión anterior basada solo en
+        // localStorage, importamos también sus cambios a la cola antes del primer pull.
+        commitManagedCollectionSync(key, value, null);
+      } else {
+        persistSetSync(key, value);
+      }
     }
     console.log('✅ Persistencia local: SQLite inicializado desde el perfil actual');
   }
@@ -130,15 +160,15 @@
 
     nativeSet.call(this, k, v);
     try {
-      persistSetSync(k, v);
+      if (MANAGED_COLLECTIONS.has(k)) commitManagedCollectionSync(k, v, previous);
+      else persistSetSync(k, v);
     } catch (error) {
-      // Si SQLite falla, restauramos localStorage para no reportar un guardado que no fue durable.
+      // Si SQLite o la cola fallan, restauramos localStorage para no reportar un
+      // guardado que no haya quedado durable y sincronizable.
       if (previous === null) nativeRemove.call(this, k);
       else nativeSet.call(this, k, previous);
       throw error;
     }
-
-    queueCollectionDiff(k, previous, v);
   };
 
   storageProto.removeItem = function (key) {
@@ -217,5 +247,5 @@
     }
   };
 
-  console.log('✅ SQLite local activo como persistencia durable de escritorio');
+  console.log('✅ SQLite local + cola de sincronización transaccional activos');
 })();
