@@ -6,6 +6,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = rel => fs.readFileSync(path.join(root, rel), 'utf8');
 const exists = rel => fs.existsSync(path.join(root, rel));
 
+const BIGINT_MIGRATION = 'supabase/migrations/20260904003156_widen_ids_for_offline_sync.sql';
+const RLS_MIGRATION = 'supabase/migrations/20260908054255_secure_cloud_sync_rls_reconcile.sql';
+
 const required = [
   'index.html',
   'css/style.css',
@@ -16,8 +19,8 @@ const required = [
   'js/desktop-sync.js',
   'js/cloud-auth.js',
   'js/supabase-client.js',
-  'supabase/migrations/20260903_windows_offline_bigint.sql',
-  'supabase/migrations/20260903_secure_cloud_sync_rls.sql',
+  BIGINT_MIGRATION,
+  RLS_MIGRATION,
   'vendor/chart.umd.js',
   'vendor/JsBarcode.all.min.js',
   'vendor/supabase.js',
@@ -86,7 +89,7 @@ for (const contract of ['signInWithPassword', 'auth.signUp', 'finalizePairing', 
   if (!cloudAuth.includes(contract)) throw new Error(`Vinculación de nube incompleta: ${contract}`);
 }
 
-const rls = read('supabase/migrations/20260903_secure_cloud_sync_rls.sql');
+const rls = read(RLS_MIGRATION);
 for (const contract of [
   'private.loto_cloud_admin()',
   'revoke all on table public.productos from anon',
@@ -94,6 +97,15 @@ for (const contract of [
   "lower(trim(coalesce(u.rol, ''))) = 'admin'"
 ]) {
   if (!rls.includes(contract)) throw new Error(`Migración RLS incompleta: ${contract}`);
+}
+
+const bigint = read(BIGINT_MIGRATION);
+for (const contract of [
+  'alter table public.productos',
+  'alter column id type bigint',
+  'alter table public.servicios_tecnicos'
+]) {
+  if (!bigint.includes(contract)) throw new Error(`Migración bigint incompleta: ${contract}`);
 }
 
 const pkg = JSON.parse(read('package.json'));
