@@ -2,7 +2,7 @@
   "name": "loto-games-erp",
   "version": "1.0.0",
   "private": true,
-  "description": "LOTO GAMES ERP / POS para Windows con persistencia local y sincronización Supabase",
+  "description": "LOTO GAMES ERP / POS para Windows con persistencia local, sincronización Supabase y actualizaciones automáticas",
   "main": "electron/main.cjs",
   "author": "LOTO GAMES",
   "license": "UNLICENSED",
@@ -11,8 +11,9 @@
     "vendor": "node scripts/copy-vendor.mjs",
     "check:js": "find js electron scripts -type f \\( -name '*.js' -o -name '*.cjs' -o -name '*.mjs' \\) -print0 | xargs -0 -n1 node --check",
     "check": "npm run vendor && npm run check:js && node scripts/validate-release.mjs",
-    "dist:win": "npm run check && electron-builder --win nsis --x64",
-    "dist:portable": "npm run check && electron-builder --win portable --x64",
+    "dist:win": "npm run check && electron-builder --win nsis --x64 --publish never",
+    "release:win": "npm run check && electron-builder --win nsis --x64 --publish always",
+    "dist:portable": "npm run check && electron-builder --win portable --x64 --publish never",
     "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
@@ -20,6 +21,7 @@
     "@supabase/supabase-js": "2.112.4",
     "better-sqlite3": "13.0.3",
     "chart.js": "4.5.1",
+    "electron-updater": "6.8.9",
     "jsbarcode": "3.12.3"
   },
   "devDependencies": {
@@ -48,6 +50,14 @@
     "directories": {
       "output": "dist"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Highdiego666",
+        "repo": "ERP-Loto-Games",
+        "releaseType": "release"
+      }
+    ],
     "win": {
       "target": [
         {
