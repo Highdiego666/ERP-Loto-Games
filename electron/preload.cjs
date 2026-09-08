@@ -13,8 +13,8 @@ contextBridge.exposeInMainWorld('lotoDesktop', {
     setSync: (key, value) => unwrap(ipcRenderer.sendSync('storage:set-sync', key, value), false),
     removeSync: key => unwrap(ipcRenderer.sendSync('storage:remove-sync', key), false),
     clearSync: () => unwrap(ipcRenderer.sendSync('storage:clear-sync'), false),
-    commitCollectionSync: (key, value, jobs) => unwrap(
-      ipcRenderer.sendSync('storage:commit-collection-sync', key, value, jobs),
+    commitCollectionSync: (key, value, jobs, auditValue = null, auditJobs = []) => unwrap(
+      ipcRenderer.sendSync('storage:commit-collection-sync', key, value, jobs, auditValue, auditJobs),
       false
     ),
     set: (key, value) => ipcRenderer.invoke('storage:set', key, value),
