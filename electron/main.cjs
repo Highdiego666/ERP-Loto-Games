@@ -7,6 +7,7 @@ let db;
 let dataDir;
 let dbPath;
 
+const AUDIT_ENTITY = 'auditoria_modificaciones';
 const ALLOWED_SYNC_ENTITIES = new Set([
   'productos',
   'ventas',
@@ -15,7 +16,8 @@ const ALLOWED_SYNC_ENTITIES = new Set([
   'servicios',
   'traspasos',
   'cuentas_plaza_movimientos',
-  'movimientos_inventario'
+  'movimientos_inventario',
+  AUDIT_ENTITY
 ]);
 
 function ensureDatabase() {
@@ -79,6 +81,9 @@ function enqueueJob(job) {
     throw new Error(`Entidad de sincronización no permitida: ${entity || '(vacía)'}`);
   }
   if (!recordId) throw new Error('recordId de sincronización vacío');
+  if (entity === AUDIT_ENTITY && operation === 'delete') {
+    throw new Error('La auditoría de Loto Games es append-only y no admite eliminaciones');
+  }
 
   const payload = operation === 'delete' ? null : JSON.stringify(job?.payload ?? {});
   db.prepare(`
@@ -94,12 +99,13 @@ function enqueueJob(job) {
   return true;
 }
 
-function commitCollection(key, value, jobs) {
+function commitCollection(key, value, jobs, auditValue = null, auditJobs = []) {
   const entity = String(key || '');
   if (!ALLOWED_SYNC_ENTITIES.has(entity)) {
     throw new Error(`Colección administrada no permitida: ${entity || '(vacía)'}`);
   }
   if (!Array.isArray(jobs)) throw new Error('Lista de sincronización inválida');
+  if (!Array.isArray(auditJobs)) throw new Error('Lista de auditoría inválida');
 
   const commit = db.transaction(() => {
     setKv(entity, value);
@@ -108,6 +114,19 @@ function commitCollection(key, value, jobs) {
         throw new Error(`Trabajo de sincronización no corresponde a ${entity}`);
       }
       enqueueJob(job);
+    }
+
+    if (auditValue !== null) {
+      if (entity === AUDIT_ENTITY) {
+        throw new Error('La auditoría no puede auditarse a sí misma');
+      }
+      setKv(AUDIT_ENTITY, auditValue);
+      for (const job of auditJobs) {
+        if (String(job?.entity || '') !== AUDIT_ENTITY) {
+          throw new Error('Trabajo de auditoría con entidad inválida');
+        }
+        enqueueJob(job);
+      }
     }
   });
 
@@ -156,8 +175,8 @@ function registerIpc() {
   ipcMain.on('storage:set-sync', (event, key, value) => replySync(event, () => setKv(key, value)));
   ipcMain.on('storage:remove-sync', (event, key) => replySync(event, () => removeKv(key)));
   ipcMain.on('storage:clear-sync', event => replySync(event, clearKv));
-  ipcMain.on('storage:commit-collection-sync', (event, key, value, jobs) => {
-    replySync(event, () => commitCollection(key, value, jobs));
+  ipcMain.on('storage:commit-collection-sync', (event, key, value, jobs, auditValue, auditJobs) => {
+    replySync(event, () => commitCollection(key, value, jobs, auditValue, auditJobs));
   });
 
   ipcMain.handle('storage:set', (_event, key, value) => setKv(key, value));
