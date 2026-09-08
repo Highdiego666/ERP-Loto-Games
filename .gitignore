@@ -1,1 +1,9 @@
+node_modules/
+dist/
+vendor/
+*.log
+.DS_Store
+.env
+.env.*
+!.env.example
 supabase/.temp/
