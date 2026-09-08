@@ -28,6 +28,17 @@ contextBridge.exposeInMainWorld('lotoDesktop', {
     complete: id => ipcRenderer.invoke('sync:complete', id),
     fail: (id, message) => ipcRenderer.invoke('sync:fail', id, message)
   },
+  update: {
+    status: () => ipcRenderer.invoke('update:status'),
+    check: () => ipcRenderer.invoke('update:check'),
+    install: () => ipcRenderer.invoke('update:install'),
+    onStatus: callback => {
+      if (typeof callback !== 'function') return () => {};
+      const listener = (_event, payload) => callback(payload);
+      ipcRenderer.on('update:status', listener);
+      return () => ipcRenderer.removeListener('update:status', listener);
+    }
+  },
   backup: {
     create: () => ipcRenderer.invoke('backup:create')
   },
