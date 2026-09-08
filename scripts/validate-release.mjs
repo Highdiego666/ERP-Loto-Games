@@ -89,6 +89,12 @@ const sync = read('js/desktop-sync.js');
 for (const contract of ['pullCloudSnapshot', 'authorizeCloud', "toLowerCase() === 'admin'", 'desktop.sync.pending(1)']) {
   if (!sync.includes(contract)) throw new Error(`Contrato offline-first incompleto: ${contract}`);
 }
+if (!sync.includes('const pulled = await pullCloudSnapshot(client);')) {
+  throw new Error('El pull posterior al push debe volver a validar una fotografía fresca de usuarios');
+}
+if (sync.includes('pullCloudSnapshot(client, authorization.users)')) {
+  throw new Error('No se debe reutilizar el snapshot de usuarios anterior al push');
+}
 if (sync.includes("usuarios: ['id','nombre','email','password'")) {
   throw new Error('La sincronización no debe transportar contraseñas heredadas en texto plano');
 }
