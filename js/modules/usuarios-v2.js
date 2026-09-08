@@ -164,8 +164,13 @@
       const data = { nombre, email, rol, estado, privilegios: rol === 'admin' ? [] : selectedPrivileges() };
       if (password) Object.assign(data, await window.AuthV2.createPassword(password));
       if (pin) Object.assign(data, await window.AuthV2.createPin(pin));
-      if (id) await window.DB.updateUsuario(id, data);
-      else await window.DB.saveUsuario(data);
+      if (id) {
+        const updated = await window.DB.updateUsuario(id, data);
+        if (updated === false) throw new Error('El usuario ya no existe en la copia local. Recarga y vuelve a intentarlo.');
+      } else {
+        const saved = await window.DB.saveUsuario(data);
+        if (!saved?.id) throw new Error('No se recibió confirmación del usuario guardado.');
+      }
       window.cerrarModalUsuario();
       await window.cargarUsuarios();
       alert('✅ Usuario guardado. Ya puede ingresar con su contraseña' + (pin ? ' o PIN.' : '.'));
