@@ -13,6 +13,12 @@ if (DEMO_MODE) {
   window.supabase = null;
   console.warn('🧪 MODO DEMO: Supabase desactivado. Los datos permanecen sólo en este navegador.');
 } else {
-  window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  console.log('✅ Supabase conectado correctamente');
+  window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true
+    }
+  });
+  console.log('✅ Supabase conectado con sesión persistente y autorrenovable');
 }
