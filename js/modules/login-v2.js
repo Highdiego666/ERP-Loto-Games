@@ -1,6 +1,6 @@
 // ============================================
-// LOTO GAMES POS - LOGIN V2
-// Usuarios reales desde DB + contraseña + PIN rápido opcional
+// LOTO GAMES POS - LOGIN V3
+// Sesión ERP + Supabase Auth sincronizadas
 // ============================================
 
 (function () {
@@ -8,6 +8,10 @@
 
   let pinIngresado = '';
   let loginMode = 'password';
+  let lastLoginError = '';
+
+  const isCloud = () => !window.LOTO_DEMO_MODE && !!window.supabase;
+  const norm = value => String(value || '').trim().toLowerCase();
 
   window.loginModule = () => `
     <div id="loginRoot" style="position:fixed;inset:0;background:radial-gradient(circle at 18% 12%,rgba(31,99,255,.20),transparent 30%),radial-gradient(circle at 82% 82%,rgba(239,43,36,.14),transparent 30%),linear-gradient(135deg,#030711,#0b1020 58%,#111a2c);display:flex;justify-content:center;align-items:center;z-index:999999;padding:20px;">
@@ -35,7 +39,7 @@
               <label>Contraseña</label>
               <input id="loginPassword" class="form-control" type="password" autocomplete="current-password" placeholder="Contraseña" required>
             </div>
-            <button type="submit" class="btn btn-primary" style="width:100%;padding:13px;">Ingresar</button>
+            <button id="loginSubmitBtn" type="submit" class="btn btn-primary" style="width:100%;padding:13px;">Ingresar</button>
           </form>
 
           <div id="loginPinPanel" style="display:none;">
@@ -48,7 +52,7 @@
                 return `<button type="button" class="pin-btn-v2" data-num="${v}" style="border:0;border-radius:12px;padding:14px;background:${bg};color:${color};font-size:20px;font-weight:700;cursor:pointer;">${label}</button>`;
               }).join('')}
             </div>
-            <small style="display:block;text-align:center;color:#94a3b8;margin-top:10px;">También puedes escribir el PIN con el teclado físico y presionar Enter.</small>
+            <small style="display:block;text-align:center;color:#94a3b8;margin-top:10px;">El PIN funciona si la sesión segura de nube sigue activa. Si expiró, ingresa una vez con contraseña.</small>
           </div>
         </div>
 
@@ -66,11 +70,34 @@
     el.textContent = text;
   }
 
+  function setBusy(busy) {
+    const btn = document.getElementById('loginSubmitBtn');
+    if (!btn) return;
+    btn.disabled = !!busy;
+    btn.textContent = busy ? 'Conectando…' : 'Ingresar';
+  }
+
   function updatePinDisplay() {
     const el = document.getElementById('pinDisplay');
     if (!el) return;
     const length = Math.max(4, pinIngresado.length);
     el.textContent = Array.from({ length }, (_, i) => i < pinIngresado.length ? '●' : '•').join('');
+  }
+
+  async function signOutCloudLocal() {
+    if (!isCloud()) return;
+    try {
+      await window.supabase.auth.signOut({ scope: 'local' });
+    } catch (error) {
+      console.warn('No se pudo cerrar la sesión Supabase local:', error);
+    }
+  }
+
+  async function cloudUser() {
+    if (!isCloud()) return null;
+    const { data, error } = await window.supabase.auth.getUser();
+    if (error || !data?.user) return null;
+    return data.user;
   }
 
   async function loginSuccess(user) {
@@ -81,27 +108,87 @@
   }
 
   async function loginWithPassword(email, password) {
-    const users = await window.DB.getUsuarios();
-    const needle = String(email || '').trim().toLowerCase();
-    const user = users.find(u =>
-      String(u.email || '').trim().toLowerCase() === needle ||
-      String(u.nombre || '').trim().toLowerCase() === needle
-    );
-    if (!user || (user.estado || 'activo') !== 'activo') return false;
-    if (!await window.AuthV2.verifyPassword(password, user)) return false;
-    await loginSuccess(user);
-    return true;
+    lastLoginError = '';
+    const needle = norm(email);
+    if (!needle || !password) return false;
+
+    let authenticatedUser = null;
+
+    if (isCloud()) {
+      const { data, error } = await window.supabase.auth.signInWithPassword({
+        email: needle,
+        password
+      });
+
+      if (error || !data?.user) {
+        lastLoginError = 'No se pudo iniciar la sesión segura de nube. Verifica el correo y la contraseña.';
+        return false;
+      }
+      authenticatedUser = data.user;
+    }
+
+    try {
+      const users = await window.DB.getUsuarios();
+      const user = users.find(u =>
+        norm(u.email) === needle || norm(u.nombre) === needle
+      );
+
+      if (!user || (user.estado || 'activo') !== 'activo') {
+        await signOutCloudLocal();
+        lastLoginError = 'Usuario inexistente o inactivo.';
+        return false;
+      }
+
+      if (authenticatedUser && norm(authenticatedUser.email) !== norm(user.email)) {
+        await signOutCloudLocal();
+        lastLoginError = 'La cuenta de nube no coincide con el usuario del ERP.';
+        return false;
+      }
+
+      if (!await window.AuthV2.verifyPassword(password, user)) {
+        await signOutCloudLocal();
+        lastLoginError = 'Usuario o contraseña incorrectos.';
+        return false;
+      }
+
+      await loginSuccess(user);
+      return true;
+    } catch (error) {
+      console.error('Error completando login ERP:', error);
+      await signOutCloudLocal();
+      lastLoginError = 'No se pudo validar el usuario en la base: ' + (error.message || error);
+      return false;
+    }
   }
 
   async function loginWithPin(pin) {
-    const users = (await window.DB.getUsuarios()).filter(u => (u.estado || 'activo') === 'activo');
-    for (const user of users) {
-      if (await window.AuthV2.verifyPin(pin, user)) {
-        await loginSuccess(user);
-        return true;
+    lastLoginError = '';
+
+    let authenticatedUser = null;
+    if (isCloud()) {
+      authenticatedUser = await cloudUser();
+      if (!authenticatedUser) {
+        lastLoginError = 'La sesión de nube expiró. Ingresa una vez con contraseña para renovarla.';
+        return false;
       }
     }
-    return false;
+
+    try {
+      const users = (await window.DB.getUsuarios()).filter(u => (u.estado || 'activo') === 'activo');
+      for (const user of users) {
+        if (authenticatedUser && norm(user.email) !== norm(authenticatedUser.email)) continue;
+        if (await window.AuthV2.verifyPin(pin, user)) {
+          await loginSuccess(user);
+          return true;
+        }
+      }
+      lastLoginError = 'PIN incorrecto.';
+      return false;
+    } catch (error) {
+      console.error('Error login PIN:', error);
+      lastLoginError = 'No se pudo validar el PIN: ' + (error.message || error);
+      return false;
+    }
   }
 
   window.cambiarModoLoginV2 = mode => {
@@ -124,12 +211,18 @@
     const bootstrap = document.getElementById('loginBootstrap');
     const normal = document.getElementById('loginNormal');
     if (!bootstrap || !normal) return;
+
+    if (isCloud()) {
+      showMessage('No hay un usuario ERP accesible. La cuenta debe existir primero en Supabase Auth.', 'error');
+      return;
+    }
+
     normal.style.display = 'none';
     bootstrap.style.display = 'block';
     bootstrap.innerHTML = `
       <div style="padding:12px;background:rgba(245,185,27,.12);border:1px solid #f5b91b;border-radius:12px;margin-bottom:16px;">
-        <strong>Configuración inicial</strong><br>
-        <small>No existen usuarios en la base de datos. Crea el administrador principal.</small>
+        <strong>Configuración inicial local</strong><br>
+        <small>No existen usuarios. Crea el administrador principal.</small>
       </div>
       <form id="formBootstrapAdmin">
         <div class="form-group"><label>Nombre</label><input id="bootNombre" class="form-control" required></div>
@@ -164,30 +257,54 @@
     });
   }
 
-  window.inicializarTecladoPIN = async () => {
-    try {
-      const users = await window.DB.getUsuarios();
-      if (users.length === 0) {
-        await setupFirstAdmin();
-        return;
-      }
-    } catch (error) {
-      console.error(error);
-      showMessage('No se pudieron cargar usuarios: ' + error.message);
+  async function submitPin() {
+    if (pinIngresado.length < 4) {
+      showMessage('El PIN debe tener al menos 4 dígitos.');
       return;
+    }
+
+    const ok = await loginWithPin(pinIngresado);
+    if (!ok) {
+      pinIngresado = '';
+      updatePinDisplay();
+      showMessage(lastLoginError || 'PIN incorrecto.');
+    }
+  }
+
+  window.inicializarTecladoPIN = async () => {
+    if (!isCloud()) {
+      try {
+        const users = await window.DB.getUsuarios();
+        if (users.length === 0) {
+          await setupFirstAdmin();
+          return;
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    } else {
+      const user = await cloudUser();
+      if (user) {
+        try {
+          const users = await window.DB.getUsuarios();
+          if (users.length === 0) await setupFirstAdmin();
+        } catch (error) {
+          console.warn('No se pudo precargar usuarios:', error);
+        }
+      }
     }
 
     document.getElementById('formLoginPassword')?.addEventListener('submit', async e => {
       e.preventDefault();
+      setBusy(true);
       try {
         const ok = await loginWithPassword(
           document.getElementById('loginEmail').value,
           document.getElementById('loginPassword').value
         );
-        if (!ok) showMessage('Usuario o contraseña incorrectos.');
-      } catch (error) {
-        console.error(error);
-        showMessage('Error de acceso: ' + error.message);
+        if (!ok) showMessage(lastLoginError || 'Usuario o contraseña incorrectos.');
+      } finally {
+        setBusy(false);
       }
     });
 
@@ -196,23 +313,17 @@
         const value = btn.dataset.num;
         if (value === 'clear') pinIngresado = pinIngresado.slice(0, -1);
         else if (value === 'enter') {
-          if (pinIngresado.length < 4) return showMessage('El PIN debe tener al menos 4 dígitos.');
-          try {
-            if (!await loginWithPin(pinIngresado)) {
-              pinIngresado = '';
-              updatePinDisplay();
-              showMessage('PIN incorrecto.');
-            }
-          } catch (error) {
-            showMessage('Error de acceso: ' + error.message);
-          }
+          await submitPin();
           return;
         } else if (pinIngresado.length < 6) pinIngresado += value;
         updatePinDisplay();
       });
     });
 
-    if (window.__lotoLoginKeyHandler) document.removeEventListener('keydown', window.__lotoLoginKeyHandler);
+    if (window.__lotoLoginKeyHandler) {
+      document.removeEventListener('keydown', window.__lotoLoginKeyHandler);
+    }
+
     window.__lotoLoginKeyHandler = async e => {
       if (!document.getElementById('loginRoot') || loginMode !== 'pin') return;
       if (/^[0-9]$/.test(e.key) && pinIngresado.length < 6) {
@@ -225,27 +336,19 @@
         updatePinDisplay();
       } else if (e.key === 'Enter') {
         e.preventDefault();
-        if (pinIngresado.length >= 4) {
-          try {
-            if (!await loginWithPin(pinIngresado)) {
-              pinIngresado = '';
-              updatePinDisplay();
-              showMessage('PIN incorrecto.');
-            }
-          } catch (error) {
-            showMessage('Error de acceso: ' + error.message);
-          }
-        }
+        await submitPin();
       }
     };
     document.addEventListener('keydown', window.__lotoLoginKeyHandler);
   };
 
   window.verificarSesion = () => window.AuthV2.getSession();
-  window.logout = () => {
+
+  window.logout = async () => {
+    await signOutCloudLocal();
     window.AuthV2.clearSession();
     location.reload();
   };
 
-  console.log('✅ Login V2 activo: DB + contraseña + PIN + teclado físico');
+  console.log('✅ Login V3 activo: ERP + Supabase Auth sincronizados');
 })();
