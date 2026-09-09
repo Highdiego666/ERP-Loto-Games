@@ -1,6 +1,6 @@
 // ============================================
-// LOTO GAMES POS - APP V2
-// Shell persistente, sesión real y permisos coherentes
+// LOTO GAMES POS - APP V3
+// Shell persistente + sesión ERP/Supabase sincronizada
 // ============================================
 
 (function () {
@@ -9,6 +9,7 @@
   const content = document.getElementById('content');
   let usuarioActual = null;
   let currentModule = 'dashboard';
+  let cloudSessionCheckRunning = false;
 
   const modulos = {
     dashboard: { nombre: 'Dashboard', descripcion: 'Visión general del negocio' },
@@ -29,6 +30,9 @@
     vendedor: ['dashboard', 'ventas', 'productos', 'clientes', 'corte'],
     tecnico: ['dashboard', 'servicios', 'productos', 'inventario', 'clientes']
   };
+
+  const isCloud = () => !window.LOTO_DEMO_MODE && !!window.supabase;
+  const norm = value => String(value || '').trim().toLowerCase();
 
   function normalizarPrivilegios(usuario) {
     return window.AuthV2?.normalizePrivileges(usuario?.privilegios) || [];
@@ -69,10 +73,45 @@
       });
   }
 
+  async function verificarSesionNube(expectedUser = usuarioActual) {
+    if (!isCloud()) return true;
+    if (cloudSessionCheckRunning) return true;
+
+    cloudSessionCheckRunning = true;
+    try {
+      const { data: sessionData, error: sessionError } = await window.supabase.auth.getSession();
+      if (sessionError || !sessionData?.session) return false;
+
+      const { data: userData, error: userError } = await window.supabase.auth.getUser();
+      if (userError || !userData?.user) return false;
+
+      if (expectedUser?.email && norm(expectedUser.email) !== norm(userData.user.email)) return false;
+      return true;
+    } catch (error) {
+      console.warn('Sesión Supabase no válida:', error);
+      return false;
+    } finally {
+      cloudSessionCheckRunning = false;
+    }
+  }
+
+  async function invalidarSesionLocal(mensaje = '') {
+    usuarioActual = null;
+    window.usuarioActual = null;
+    window.AuthV2?.clearSession();
+    if (mensaje) console.warn(mensaje);
+    await mostrarLogin();
+  }
+
   async function actualizarEstadoDB() {
     if (window.LOTO_DEMO_MODE || !window.supabase) {
       pintarEstadoDB('demo', 'Modo local', 'Supabase no está activo en esta sesión.');
       return { ok: false, modo: 'demo/local' };
+    }
+
+    if (usuarioActual && !await verificarSesionNube(usuarioActual)) {
+      pintarEstadoDB('error', 'Sesión vencida', 'Vuelve a iniciar sesión para recuperar las escrituras.');
+      return { ok: false, error: new Error('Sesión Supabase vencida') };
     }
 
     pintarEstadoDB('checking', 'Verificando…');
@@ -140,6 +179,13 @@
 
   async function loadModule(moduleName) {
     if (!usuarioActual) return mostrarLogin();
+
+    if (isCloud() && !await verificarSesionNube(usuarioActual)) {
+      pintarEstadoDB('error', 'Sesión vencida', 'Vuelve a iniciar sesión.');
+      await invalidarSesionLocal('La sesión Supabase dejó de ser válida.');
+      return;
+    }
+
     if (!tieneAcceso(moduleName)) {
       alert('No tienes privilegios para acceder a este módulo.');
       return;
@@ -153,6 +199,7 @@
 
     currentModule = moduleName;
     content.innerHTML = fn();
+
     const meta = modulos[moduleName] || { nombre: moduleName, descripcion: '' };
     const title = document.getElementById('pageTitle');
     const desc = document.getElementById('pageDescription');
@@ -176,6 +223,12 @@
   }
 
   window.cargarSistemaLogin = async usuario => {
+    if (isCloud() && !await verificarSesionNube(usuario)) {
+      window.AuthV2?.clearSession();
+      await mostrarLogin();
+      return;
+    }
+
     usuarioActual = usuario;
     window.usuarioActual = usuario;
     setShellVisible(true);
@@ -185,6 +238,7 @@
     const userRole = document.getElementById('userRoleSidebar');
     if (userName) userName.textContent = usuario.nombre || 'Usuario';
     if (userRole) userRole.textContent = usuario.rol || '';
+
     construirMenu(usuario);
     await actualizarEstadoDB();
 
@@ -192,6 +246,7 @@
     const inicial = accesos.includes('ventas') && usuario.rol === 'vendedor'
       ? 'ventas'
       : (accesos.includes('dashboard') ? 'dashboard' : accesos[0]);
+
     if (inicial) await loadModule(inicial);
   };
 
@@ -200,9 +255,15 @@
   window.getUsuarioActual = () => usuarioActual;
   window.getModulosAcceso = () => obtenerModulosAcceso(usuarioActual);
   window.verificarEstadoDB = actualizarEstadoDB;
+  window.verificarSesionNube = verificarSesionNube;
 
-  window.cerrarSesion = () => {
+  window.cerrarSesion = async () => {
     if (!confirm('¿Cerrar sesión?')) return;
+    try {
+      if (isCloud()) await window.supabase.auth.signOut({ scope: 'local' });
+    } catch (error) {
+      console.warn('Error cerrando Supabase:', error);
+    }
     window.AuthV2?.clearSession();
     location.reload();
   };
@@ -226,22 +287,67 @@
     }
   }
 
+  function bindCloudAuthEvents() {
+    if (!isCloud() || window.__lotoAuthSubscription) return;
+
+    const { data } = window.supabase.auth.onAuthStateChange((event) => {
+      if (event === 'TOKEN_REFRESHED') {
+        setTimeout(() => {
+          if (usuarioActual) actualizarEstadoDB();
+        }, 0);
+      }
+
+      if (event === 'SIGNED_OUT') {
+        setTimeout(() => {
+          if (!usuarioActual) return;
+          usuarioActual = null;
+          window.usuarioActual = null;
+          window.AuthV2?.clearSession();
+          mostrarLogin();
+        }, 0);
+      }
+    });
+
+    window.__lotoAuthSubscription = data?.subscription || null;
+  }
+
   function updateDateTime() {
     const el = document.getElementById('currentDate');
-    if (el) el.textContent = new Date().toLocaleDateString('es-MX', {
-      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-    });
+    if (el) {
+      el.textContent = new Date().toLocaleDateString('es-MX', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+      });
+    }
+  }
+
+  async function periodicCloudCheck() {
+    if (!usuarioActual || !isCloud()) return;
+    const ok = await verificarSesionNube(usuarioActual);
+    if (!ok) {
+      pintarEstadoDB('error', 'Sesión vencida', 'Ingresa nuevamente para continuar editando.');
+      await invalidarSesionLocal('Chequeo periódico: sesión Supabase inválida.');
+    }
   }
 
   document.addEventListener('DOMContentLoaded', async () => {
     bindNavigation();
+    bindCloudAuthEvents();
     updateDateTime();
     setInterval(updateDateTime, 60000);
+    setInterval(periodicCloudCheck, 120000);
 
     const session = window.AuthV2?.getSession();
-    if (session) await window.cargarSistemaLogin(session);
-    else await mostrarLogin();
+    if (session) {
+      if (!isCloud() || await verificarSesionNube(session)) {
+        await window.cargarSistemaLogin(session);
+      } else {
+        window.AuthV2?.clearSession();
+        await mostrarLogin();
+      }
+    } else {
+      await mostrarLogin();
+    }
   });
 
-  console.log('✅ App V2 cargado: shell persistente + permisos + diagnóstico V1');
+  console.log('✅ App V3 cargado: sesión ERP + Supabase sincronizada');
 })();
