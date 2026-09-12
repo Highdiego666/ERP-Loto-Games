@@ -1,6 +1,6 @@
 // ============================================
 // LOTO GAMES POS - VENTAS / DATABASE V3
-// Persiste subtotal y descuento + diagnóstico seguro de Supabase
+// Persiste subtotal/descuento y deja trazabilidad de inventario.
 // ============================================
 
 (function () {
@@ -21,14 +21,12 @@
   };
   const round2 = value => Math.round((numberOr(value) + Number.EPSILON) * 100) / 100;
 
-  // Verificación de sólo lectura. No inserta, actualiza ni elimina datos.
-  // Sirve para validar la migración antes de registrar una venta real.
   db.verificarConexionFinal = async function () {
     if (!hasSupabase()) {
       return {
         ok: false,
         modo: 'demo/local',
-        mensaje: 'Supabase no está activo. Abre el POS sin ?demo=1 para verificar la base real.'
+        mensaje: 'Supabase no está activo en la capa operativa. En escritorio esto es normal: SQLite/local es la fuente primaria.'
       };
     }
 
@@ -41,11 +39,7 @@
       ['cuentas_plaza_movimientos', 'id,cliente_id,tipo,monto,fecha']
     ];
 
-    const resultado = {
-      ok: true,
-      modo: 'supabase',
-      tablas: {}
-    };
+    const resultado = { ok: true, modo: 'supabase', tablas: {} };
 
     for (const [tabla, columnas] of pruebas) {
       const { data, error, count } = await window.supabase
@@ -55,11 +49,7 @@
 
       if (error) {
         resultado.ok = false;
-        resultado.tablas[tabla] = {
-          ok: false,
-          error: error.message,
-          code: error.code || null
-        };
+        resultado.tablas[tabla] = { ok: false, error: error.message, code: error.code || null };
       } else {
         resultado.tablas[tabla] = {
           ok: true,
@@ -95,6 +85,21 @@
       fecha: venta.fecha || new Date().toISOString()
     };
 
+    // Validar existencias ANTES de crear la venta. Las ventas rápidas no usan inventario.
+    const stockPlan = [];
+    for (const item of payload.items) {
+      if (item.tipo === 'rapida') continue;
+      const producto = await db.getProductoById(item.id);
+      if (!producto) throw new Error(`El producto ${item.nombre || item.id} ya no existe.`);
+      const cantidad = Math.max(0, numberOr(item.cantidad, 0));
+      const stockAnterior = numberOr(producto.stock, 0);
+      if (cantidad <= 0) throw new Error(`Cantidad inválida para ${producto.nombre}.`);
+      if (cantidad > stockAnterior) {
+        throw new Error(`Stock insuficiente para ${producto.nombre}. Disponible: ${stockAnterior}.`);
+      }
+      stockPlan.push({ producto, cantidad, stockAnterior, stockNuevo: stockAnterior - cantidad });
+    }
+
     let row;
     if (hasSupabase()) {
       const { data, error } = await window.supabase
@@ -111,19 +116,30 @@
       localSet('ventas', ventas);
     }
 
-    // Inventario: sólo productos registrados; una venta rápida no descuenta stock.
-    for (const item of payload.items) {
-      if (item.tipo === 'rapida') continue;
-      const producto = await db.getProductoById(item.id);
-      if (!producto) continue;
-      const nuevoStock = Math.max(
-        0,
-        numberOr(producto.stock, 0) - numberOr(item.cantidad, 0)
-      );
-      await db.updateProducto(item.id, { stock: nuevoStock });
+    for (const cambio of stockPlan) {
+      await db.updateProducto(cambio.producto.id, { stock: cambio.stockNuevo });
+
+      // El movimiento es trazabilidad; si falla su bitácora no fingimos que la venta
+      // falló después de haber quedado registrada. El diagnóstico sí conserva el error.
+      if (typeof db.registrarMovimientoInventario === 'function') {
+        try {
+          await db.registrarMovimientoInventario({
+            producto_id: cambio.producto.id,
+            producto_nombre: cambio.producto.nombre,
+            tipo: 'salida',
+            cantidad: cambio.cantidad,
+            stock_anterior: cambio.stockAnterior,
+            stock_nuevo: cambio.stockNuevo,
+            motivo: `Venta #${row?.id ?? ''}`.trim(),
+            usuario: payload.usuario,
+            fecha: payload.fecha
+          });
+        } catch (error) {
+          console.warn('Venta guardada, pero no se pudo registrar movimiento de inventario:', error);
+        }
+      }
     }
 
-    // Cuenta Plaza usa el TOTAL ya descontado, que es el importe realmente adeudado.
     if (payload.es_credito_plaza && payload.cliente_id) {
       await db.registrarMovimientoPlaza({
         cliente_id: payload.cliente_id,
@@ -141,5 +157,5 @@
     return row;
   };
 
-  console.log('✅ Database Sales V3: descuento persistente + diagnóstico de conexión');
+  console.log('✅ Database Sales V3: stock validado + descuento persistente + movimientos de inventario');
 })();
