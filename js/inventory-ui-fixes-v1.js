@@ -37,9 +37,9 @@
       ['Control DualSense', 'accesorios', 'nueva', '1500', '12', 'LOT-CTR-003', 'LGCODE-000003'],
       ['Nintendo Switch', 'consolas', 'usada-completa', '4500', '2', 'LOT-NSW-004', 'LGCODE-000004']
     ];
-    const csv = [headers, ...ejemplos]
-      .map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(','))
-      .join('\r\n');
+    // El parser heredado aún es simple y no interpreta comas dentro de campos.
+    // La plantilla evita comas internas para seguir siendo compatible.
+    const csv = [headers, ...ejemplos].map(row => row.join(',')).join('\r\n');
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
