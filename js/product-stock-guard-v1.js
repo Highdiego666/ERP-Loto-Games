@@ -1,5 +1,5 @@
 // ============================================
-// LOTO GAMES - GUARDA DE STOCK EN PRODUCTOS V1
+// LOTO GAMES - GUARDA DE STOCK EN PRODUCTOS V2
 // El catálogo edita datos/precios; Inventario y Traspasos controlan existencias.
 // ============================================
 
@@ -52,5 +52,29 @@
     };
   }
 
-  console.log('✅ Productos: stock protegido; ajustes en Inventario y movimientos en Traspasos');
+  const originalDelete = window.eliminarProducto;
+  if (typeof originalDelete === 'function') {
+    window.eliminarProducto = async id => {
+      try {
+        const product = await window.DB.getProductoById(id);
+        if (!product) return alert('Producto no encontrado. Recarga el catálogo.');
+
+        const split = typeof window.DB.getStocksByStore === 'function'
+          ? window.DB.getStocksByStore(product)
+          : { '14': String(product.local || '') === '14' ? Number(product.stock || 0) : 0, '20': String(product.local || '') === '20' ? Number(product.stock || 0) : 0, unassigned: 0, total: Number(product.stock || 0) };
+        const total = Number(split?.total ?? product.stock ?? 0);
+        const unassigned = Number(split?.unassigned || 0);
+
+        if (total > 0 || unassigned > 0) {
+          return alert(`No se puede eliminar ${product.nombre} mientras tenga existencias.\nLocal 14: ${Number(split?.['14'] || 0)}\nLocal 20: ${Number(split?.['20'] || 0)}\nSin asignar: ${unassigned}\nTotal: ${total}\n\nAjusta el inventario a cero antes de eliminarlo.`);
+        }
+        return originalDelete(id);
+      } catch (error) {
+        console.error(error);
+        alert('❌ No se pudo validar el inventario antes de eliminar: ' + (error?.message || error));
+      }
+    };
+  }
+
+  console.log('✅ Productos: stock protegido; borrado bloqueado con existencias; ajustes en Inventario y movimientos en Traspasos');
 })();
