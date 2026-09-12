@@ -1,6 +1,6 @@
 // ============================================
 // LOTO GAMES - IMPRESIÓN NATIVA V1
-// Usa Electron para listar/seleccionar impresoras y evita popups del navegador.
+// Directa por Electron; diálogo manual en la ventana principal como respaldo.
 // ============================================
 
 (function () {
@@ -22,21 +22,30 @@
   }
 
   async function nativePrint(html, widthMm = 80, options = {}) {
-    if (!desktop?.isDesktop || !desktop.printer?.printHtml) {
-      if (!fallbackPrint) throw new Error('No hay motor de impresión disponible.');
-      return fallbackPrint(html, widthMm);
-    }
-
     const kind = options.kind || printerKind(widthMm);
     const deviceName = options.deviceName ?? getSetting(`loto_${kind}_printer`, '');
     const silentConfigured = getSetting(`loto_${kind}_silent`, '0') === '1';
     const silent = options.silent ?? (silentConfigured && !!deviceName);
     const copies = Math.max(1, Math.min(Number(options.copies ?? getSetting(`loto_${kind}_copies`, '1')) || 1, 20));
 
+    // Para el modo manual usamos el iframe de la ventana principal. Así el
+    // diálogo de Windows siempre aparece delante del POS y no desde una ventana oculta.
+    if (!silent) {
+      if (!fallbackPrint) throw new Error('No hay motor de impresión manual disponible.');
+      return fallbackPrint(html, widthMm);
+    }
+
+    if (!desktop?.isDesktop || !desktop.printer?.printHtml) {
+      throw new Error('La impresión directa sólo está disponible en la aplicación de escritorio.');
+    }
+    if (!deviceName) {
+      throw new Error('Selecciona una impresora antes de activar impresión directa.');
+    }
+
     const request = {
       html,
       deviceName,
-      silent,
+      silent: true,
       copies
     };
 
@@ -105,5 +114,5 @@
     }
   };
 
-  console.log('✅ Impresión nativa V1: miniprinter/etiquetas conectadas por IPC');
+  console.log('✅ Impresión V1: directa por miniprinter configurada + diálogo visible de respaldo');
 })();
