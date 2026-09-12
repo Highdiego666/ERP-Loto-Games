@@ -24,7 +24,7 @@
   };
 
   const ALLOWED = {
-    productos: ['id','nombre','sku','codigo_barras','categoria','tipo','precio','stock','created_at','local','precio_cliente','precio_mayorista','precio_plaza','precio_base_cliente','precio_base_mayorista','precio_base_plaza','precio_markup_5_aplicado'],
+    productos: ['id','nombre','sku','codigo_barras','categoria','tipo','precio','stock','stock_local_14','stock_local_20','created_at','local','precio_cliente','precio_mayorista','precio_plaza','precio_base_cliente','precio_base_mayorista','precio_base_plaza','precio_markup_5_aplicado'],
     ventas: ['id','items','subtotal','iva','total','metodo_pago','comentario','fecha','usuario','descuento_aplicado','cliente_id','cliente_nombre','tipo_precio','es_credito_plaza','descuento_porcentaje','descuento_monto'],
     clientes: ['id','nombre','email','telefono','direccion','created_at','tipo_cliente','credito_habilitado','notas'],
     // Nunca descargar ni subir password/pin heredados en texto plano.
