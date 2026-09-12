@@ -15,6 +15,7 @@ const required = [
   'js/corte-print-pilot.js',
   'js/configuracion-v1.js',
   'js/store-stock-v1.js',
+  'js/product-stock-guard-v1.js',
   'js/inventory-ui-fixes-v1.js',
   'js/inventory-report-v1.js',
   'js/desktop-sync.js',
@@ -57,6 +58,7 @@ for (const script of [
   'js/corte-print-pilot.js',
   'js/configuracion-v1.js',
   'js/store-stock-v1.js',
+  'js/product-stock-guard-v1.js',
   'js/inventory-ui-fixes-v1.js',
   'js/inventory-report-v1.js'
 ]) {
@@ -73,6 +75,9 @@ if (html.indexOf('js/native-print-v1.js') < html.indexOf('js/stability-fixes-v1.
 }
 if (html.indexOf('js/store-stock-v1.js') < html.indexOf('js/configuracion-v1.js')) {
   throw new Error('El stock por local debe cargar después de Configuración para extenderla de forma segura');
+}
+if (html.indexOf('js/product-stock-guard-v1.js') < html.indexOf('js/store-stock-v1.js')) {
+  throw new Error('La guarda de Productos debe cargar después del modelo de stock por local');
 }
 if (html.indexOf('js/store-stock-v1.js') > html.indexOf('js/desktop-sync.js')) {
   throw new Error('El stock por local debe inicializarse antes del motor de sincronización');
@@ -151,6 +156,17 @@ for (const contract of [
   if (!storeStock.includes(contract)) throw new Error(`Existencias por local incompletas: ${contract}`);
 }
 
+const productGuard = read('js/product-stock-guard-v1.js');
+for (const contract of [
+  'setInventoryFieldsLocked',
+  'prodLocal',
+  'prodStock',
+  'Inventario',
+  'Traspasos'
+]) {
+  if (!productGuard.includes(contract)) throw new Error(`Protección de stock en Productos incompleta: ${contract}`);
+}
+
 const transferModule = read('js/modules/traspasos-v2.js');
 for (const contract of ['TRASPASOS V3', 'Local 14', 'Local 20', 'transferBetweenStores', 'stock14Traspaso', 'stock20Traspaso']) {
   if (!transferModule.includes(contract)) throw new Error(`Traspasos V3 incompleto: ${contract}`);
@@ -192,8 +208,14 @@ for (const contract of ["local,'')) = '14'", "local,'')) = '20'"]) {
 }
 
 const testPlan = read('docs/PRUEBAS_POS_FINAL.md');
-for (const contract of ['Prueba de estabilidad prolongada', 'Ticket y miniprinter', 'Traspasos — prueba E2E obligatoria']) {
+for (const contract of [
+  'Prueba de estabilidad prolongada',
+  'Ticket y miniprinter',
+  'Traspasos — prueba E2E obligatoria',
+  'Local 14 → Local 20',
+  'stock total NO cambia'
+]) {
   if (!testPlan.includes(contract)) throw new Error(`Plan de pruebas incompleto: ${contract}`);
 }
 
-console.log('✅ Pilot checks OK: runtime limpio, configuración integrada, stock Local 14/20, edición protegida, inventario trazable, miniprinter nativa, impresión sin popup y Traspasos V3 reproducible');
+console.log('✅ Pilot checks OK: runtime limpio, configuración integrada, stock Local 14/20 protegido, edición protegida, inventario trazable, miniprinter nativa, impresión sin popup y Traspasos V3 reproducible');
