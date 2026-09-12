@@ -11,9 +11,11 @@ const required = [
   'js/native-print-v1.js',
   'js/corte-print-pilot.js',
   'js/configuracion-v1.js',
+  'js/inventory-report-v1.js',
   'js/desktop-sync.js',
   'js/modules/ventas-v5.js',
   'js/modules/traspasos-v2.js',
+  'js/utils/database-sales-v3.js',
   'electron/main.cjs',
   'electron/preload.cjs',
   'supabase/migrations/20260912173000_allow_inventory_transfer_type.sql',
@@ -30,6 +32,7 @@ const forbiddenDeadFiles = [
   'js/modules/clientes.js',
   'js/modules/corte.js',
   'js/modules/productos.js',
+  'js/modules/productos-label-v2.js',
   'js/modules/ventas.js',
   'js/modules/ventas-v2.js',
   'js/modules/ventas-v3.js',
@@ -44,11 +47,13 @@ for (const script of [
   'js/stability-fixes-v1.js',
   'js/native-print-v1.js',
   'js/corte-print-pilot.js',
-  'js/configuracion-v1.js'
+  'js/configuracion-v1.js',
+  'js/inventory-report-v1.js'
 ]) {
   if (!html.includes(script)) throw new Error(`index.html no carga ${script}`);
 }
 if (html.includes('js/modules/ventas.js')) throw new Error('Ventas legacy no debe cargarse junto a Ventas V5');
+if (html.includes('js/modules/productos-label-v2.js')) throw new Error('Etiquetas legacy por popup no deben cargarse');
 if (html.indexOf('js/stability-fixes-v1.js') < html.indexOf('js/modules/ventas-v5.js')) {
   throw new Error('La estabilización debe cargarse después de Ventas V5 para aplicar overrides controlados');
 }
@@ -57,6 +62,9 @@ if (html.indexOf('js/native-print-v1.js') < html.indexOf('js/stability-fixes-v1.
 }
 if (html.indexOf('js/configuracion-v1.js') < html.indexOf('js/app-v2.js')) {
   throw new Error('Configuración debe cargarse después del shell para envolver cargarSistemaLogin');
+}
+if (html.indexOf('js/inventory-report-v1.js') < html.indexOf('js/modules/reportes-v2.js')) {
+  throw new Error('El reporte de inventario V1 debe cargar después de Reportes V2');
 }
 
 const stability = read('js/stability-fixes-v1.js');
@@ -99,6 +107,16 @@ for (const contract of ['shouldDeferPull', 'Local · edición protegida', 'RECEN
   if (!sync.includes(contract)) throw new Error(`Sincronización sin protección de edición: ${contract}`);
 }
 
+const sales = read('js/utils/database-sales-v3.js');
+for (const contract of ['Stock insuficiente', 'registrarMovimientoInventario', "tipo: 'salida'", 'stock_anterior', 'stock_nuevo']) {
+  if (!sales.includes(contract)) throw new Error(`Venta sin trazabilidad de inventario: ${contract}`);
+}
+
+const inventoryReport = read('js/inventory-report-v1.js');
+for (const contract of ['getMovimientosInventario', 'getTraspasos', 'stock_anterior', 'stock_nuevo']) {
+  if (!inventoryReport.includes(contract)) throw new Error(`Reporte de inventario incompleto: ${contract}`);
+}
+
 const transferMigration = read('supabase/migrations/20260912173000_allow_inventory_transfer_type.sql');
 if (!transferMigration.includes("'traspaso'")) throw new Error('La migración no permite el tipo traspaso');
 
@@ -107,4 +125,4 @@ for (const contract of ['Prueba de estabilidad prolongada', 'Ticket y miniprinte
   if (!testPlan.includes(contract)) throw new Error(`Plan de pruebas incompleto: ${contract}`);
 }
 
-console.log('✅ Pilot checks OK: runtime limpio, edición protegida, miniprinter nativa, impresión sin popup y Traspasos reproducible');
+console.log('✅ Pilot checks OK: runtime limpio, edición protegida, inventario trazable, miniprinter nativa, impresión sin popup y Traspasos reproducible');
