@@ -10,6 +10,7 @@ Registrar siempre:
 - versión mostrada por el instalador;
 - PC donde se probó;
 - impresora utilizada;
+- local configurado en la estación: Local 14 o Local 20;
 - si había Internet o se trabajó offline.
 
 La rama de estabilización debe partir de `vnext/windows-release` y conservar SQLite local como fuente primaria.
@@ -47,8 +48,9 @@ No continuar el piloto si la aplicación pierde capacidad de edición.
 
 ## 4. Productos
 
-- Crear un producto con precios Cliente, Mayorista y Plaza.
-- Editarlo sin perder SKU, código, categoría, local ni stock.
+- Crear un producto indicando Local 14 o Local 20 y su stock inicial.
+- Editar nombre, categoría, tipo y precios sin alterar existencias por local.
+- Confirmar que al editar un producto existente los campos Local y Stock quedan protegidos.
 - Buscar por nombre, SKU y código.
 - Ajustar stock desde Inventario.
 - Confirmar que el ajuste genera un movimiento de inventario con stock anterior, nuevo, motivo y usuario.
@@ -56,7 +58,8 @@ No continuar el piloto si la aplicación pierde capacidad de edición.
 
 ## 5. Inventario
 
-- Ajustar stock hacia arriba y hacia abajo.
+- Ajustar stock hacia arriba y hacia abajo seleccionando explícitamente Local 14 o Local 20.
+- Confirmar que el total global es la suma de existencias asignadas más cualquier existencia legacy aún sin asignar.
 - Confirmar que no se alteran nombre/precios/SKU al tocar sólo stock.
 - Revisar Reportes → Movimientos.
 - Verificar que una entrada se registra como `entrada` y una reducción como `salida`.
@@ -65,6 +68,7 @@ La importación masiva debe considerarse CSV mientras no exista un parser XLSX r
 
 ## 6. Punto de Venta
 
+- En Configuración, seleccionar primero el local de la estación: Local 14 o Local 20.
 - Agregar producto por clic.
 - Buscar por nombre/SKU.
 - Escanear un código de barras real.
@@ -73,19 +77,18 @@ La importación masiva debe considerarse CSV mientras no exista un parser XLSX r
 - Probar Cliente / Mayorista / Plaza.
 - Probar venta rápida.
 - Probar descuento F6.
-- Finalizar venta y verificar reducción exacta de stock.
+- Finalizar venta y verificar reducción exacta del stock total y del local correspondiente.
 - Reiniciar la aplicación y confirmar que la venta sigue existiendo.
 
 ## 7. Ticket y miniprinter
 
 - Finalizar una venta.
 - Elegir imprimir ticket.
-- Confirmar que el ejecutable abre el diálogo de impresión del sistema sin usar popups.
-- Elegir la miniprinter instalada en Windows.
+- Confirmar que el ejecutable imprime sin depender de popups.
+- En Configuración seleccionar la miniprinter instalada en Windows.
+- Probar impresión directa y el diálogo de respaldo.
 - Probar papel de 58 mm y 80 mm según el equipo disponible.
 - Verificar legibilidad de nombre, cantidades, precios, total, método de pago, vendedor y fecha.
-
-La selección persistente y la impresión silenciosa por impresora configurada quedan como siguiente etapa del módulo Configuración.
 
 ## 8. Clientes y Cuenta Plaza
 
@@ -106,17 +109,23 @@ La selección persistente y la impresión silenciosa por impresora configurada q
 
 ## 10. Traspasos — prueba E2E obligatoria
 
-- Seleccionar producto.
-- Elegir origen y destino distintos.
-- Capturar cantidad y motivo.
+- Confirmar que Producto, Origen, Destino, Cantidad y Motivo aceptan interacción y escritura normal.
+- Seleccionar un producto con existencia conocida en Local 14 o Local 20.
+- Anotar antes del movimiento: stock Local 14, stock Local 20 y stock total.
+- Elegir Local 14 → Local 20 o Local 20 → Local 14.
+- Capturar cantidad 1 para la primera prueba y un motivo identificable.
 - Registrar el traspaso.
 - Confirmar mensaje de éxito.
-- Confirmar que aparece inmediatamente en historial.
+- Confirmar que el local de origen disminuye exactamente 1.
+- Confirmar que el local de destino aumenta exactamente 1.
+- Confirmar que el stock total NO cambia.
+- Confirmar que aparece inmediatamente en historial con producto, origen, destino, cantidad, motivo y usuario.
 - Reiniciar la aplicación y confirmar persistencia.
 - Con Internet, esperar sincronización y confirmar que aparece en Supabase.
 - Revisar Reportes → Movimientos.
+- Hacer el movimiento inverso si la prueba debe devolver físicamente la pieza al local original.
 
-El modelo actual registra el traslado y conserva el stock total. Todavía no modela stock separado por almacén; no presentar esa parte como inventario multi-almacén terminado.
+El modelo operativo de la candidata usa únicamente Local 14 y Local 20. No deben reaparecer ubicaciones genéricas como Principal, Secundario, Taller o Tienda.
 
 ## 11. Corte y reportes
 
@@ -130,6 +139,7 @@ El modelo actual registra el traslado y conserva el stock total. Todavía no mod
 
 - Trabajar con Internet.
 - Desconectar red y crear/editar datos.
+- Ejecutar un traspaso de prueba offline y confirmar que queda en la copia local.
 - Cerrar y abrir el POS offline.
 - Confirmar que los datos locales siguen presentes.
 - Reconectar.
@@ -144,6 +154,7 @@ La candidata sólo se entrega si:
 
 - supera la prueba prolongada sin congelar entradas;
 - Clientes, Productos, Inventario, Servicio, Ventas y Traspasos completan operaciones E2E;
+- los traspasos preservan stock total y modifican correctamente Local 14 / Local 20;
 - persiste datos tras reinicio;
 - trabaja offline;
 - sincroniza al recuperar Internet;
