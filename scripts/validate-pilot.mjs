@@ -5,12 +5,16 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = rel => fs.readFileSync(path.join(root, rel), 'utf8');
 const exists = rel => fs.existsSync(path.join(root, rel));
+const executableText = text => text
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  .replace(/^\s*\/\/.*$/gm, '');
 
 const required = [
   'js/stability-fixes-v1.js',
   'js/native-print-v1.js',
   'js/corte-print-pilot.js',
   'js/configuracion-v1.js',
+  'js/inventory-ui-fixes-v1.js',
   'js/inventory-report-v1.js',
   'js/desktop-sync.js',
   'js/modules/ventas-v5.js',
@@ -48,10 +52,12 @@ for (const script of [
   'js/native-print-v1.js',
   'js/corte-print-pilot.js',
   'js/configuracion-v1.js',
+  'js/inventory-ui-fixes-v1.js',
   'js/inventory-report-v1.js'
 ]) {
   if (!html.includes(script)) throw new Error(`index.html no carga ${script}`);
 }
+if (!html.includes('data-module="configuracion"')) throw new Error('Configuración no está integrada al menú real');
 if (html.includes('js/modules/ventas.js')) throw new Error('Ventas legacy no debe cargarse junto a Ventas V5');
 if (html.includes('js/modules/productos-label-v2.js')) throw new Error('Etiquetas legacy por popup no deben cargarse');
 if (html.indexOf('js/stability-fixes-v1.js') < html.indexOf('js/modules/ventas-v5.js')) {
@@ -60,8 +66,8 @@ if (html.indexOf('js/stability-fixes-v1.js') < html.indexOf('js/modules/ventas-v
 if (html.indexOf('js/native-print-v1.js') < html.indexOf('js/stability-fixes-v1.js')) {
   throw new Error('La impresión nativa debe cargarse después del fallback de estabilidad');
 }
-if (html.indexOf('js/configuracion-v1.js') < html.indexOf('js/app-v2.js')) {
-  throw new Error('Configuración debe cargarse después del shell para envolver cargarSistemaLogin');
+if (html.indexOf('js/inventory-ui-fixes-v1.js') < html.indexOf('js/modules/inventario.js')) {
+  throw new Error('Los ajustes UI de inventario deben cargar después de Inventario');
 }
 if (html.indexOf('js/inventory-report-v1.js') < html.indexOf('js/modules/reportes-v2.js')) {
   throw new Error('El reporte de inventario V1 debe cargar después de Reportes V2');
@@ -79,13 +85,17 @@ for (const contract of [
 ]) {
   if (!stability.includes(contract)) throw new Error(`Falta contrato pre-piloto: ${contract}`);
 }
-if (stability.includes('window.open(')) throw new Error('La impresión del piloto no debe depender de popups en la capa de estabilidad');
+if (/\bwindow\.open\s*\(/.test(executableText(stability))) {
+  throw new Error('La capa de estabilidad ejecuta window.open');
+}
 
 const nativePrint = read('js/native-print-v1.js');
 for (const contract of ['LotoNativePrint', 'loto_ticket_printer', 'loto_label_printer', 'printHtml']) {
   if (!nativePrint.includes(contract)) throw new Error(`Impresión nativa incompleta: ${contract}`);
 }
-if (nativePrint.includes('window.open(')) throw new Error('La impresión nativa no puede usar window.open');
+if (/\bwindow\.open\s*\(/.test(executableText(nativePrint))) {
+  throw new Error('La impresión nativa ejecuta window.open');
+}
 
 const main = read('electron/main.cjs');
 for (const contract of ['getPrintersAsync', "ipcMain.handle('printer:list'", "ipcMain.handle('printer:print-html'", 'webContents.print']) {
@@ -97,9 +107,19 @@ for (const contract of ["ipcRenderer.invoke('printer:list')", "ipcRenderer.invok
   if (!preload.includes(contract)) throw new Error(`Preload no expone impresión: ${contract}`);
 }
 
+const app = read('js/app-v2.js');
+for (const contract of ["configuracion: {", "case 'configuracion'", "window.cargarConfiguracion"]) {
+  if (!app.includes(contract)) throw new Error(`Configuración no está integrada al shell: ${contract}`);
+}
+
 const config = read('js/configuracion-v1.js');
-for (const contract of ['Configuración', 'Miniprinter / tickets', 'Impresora de etiquetas', 'LotoRuntimeHealth', 'probarTicketConfiguracion']) {
+for (const contract of ['window.configuracionModule', 'Miniprinter / tickets', 'Impresora de etiquetas', 'LotoRuntimeHealth', 'probarTicketConfiguracion', 'window.cargarConfiguracion']) {
   if (!config.includes(contract)) throw new Error(`Configuración de piloto incompleta: ${contract}`);
+}
+
+const inventoryUi = read('js/inventory-ui-fixes-v1.js');
+for (const contract of ['Cargar CSV', 'accept=".csv,text/csv"', 'LGCODE-000001']) {
+  if (!inventoryUi.includes(contract)) throw new Error(`Inventario sigue prometiendo importación incorrecta: ${contract}`);
 }
 
 const sync = read('js/desktop-sync.js');
@@ -125,4 +145,4 @@ for (const contract of ['Prueba de estabilidad prolongada', 'Ticket y miniprinte
   if (!testPlan.includes(contract)) throw new Error(`Plan de pruebas incompleto: ${contract}`);
 }
 
-console.log('✅ Pilot checks OK: runtime limpio, edición protegida, inventario trazable, miniprinter nativa, impresión sin popup y Traspasos reproducible');
+console.log('✅ Pilot checks OK: runtime limpio, configuración integrada, edición protegida, inventario trazable, miniprinter nativa, impresión sin popup y Traspasos reproducible');
