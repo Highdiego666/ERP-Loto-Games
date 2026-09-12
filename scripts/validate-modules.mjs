@@ -32,6 +32,7 @@ const runtimeFiles = [
   'js/product-stock-guard-v1.js',
   'js/sales-store-ui-v1.js',
   'js/reports-store-view-v1.js',
+  'js/scanner-config-v2.js',
   'js/legacy-data-normalization-v1.js',
   'js/native-print-v1.js',
   'js/corte-print-pilot.js',
@@ -63,6 +64,8 @@ const salesDb = requireFile('js/utils/database-sales-v3.js');
 requireAll(salesDb, 'Ventas DB', ['Stock insuficiente', 'registrarMovimientoInventario', 'descuento_monto', 'registrarMovimientoPlaza']);
 const salesStore = read('js/sales-store-ui-v1.js');
 requireAll(salesStore, 'Ventas por local', ['loto_store_id', 'getStocksByStore', 'requireStation', 'Local ${store}', 'window.finalizarVenta', 'Sin existencias']);
+const scanner = read('js/scanner-config-v2.js');
+requireAll(scanner, 'Scanner', ['loto_scanner_timeout_ms', 'loto_scanner_suffix', "['Enter','Tab','Auto']", 'window.inicializarEscannerV2', 'window.guardarScannerConfig', 'window.procesarCodigoEscaneadoV2']);
 
 const products = read('js/modules/productos-v2.js');
 requireAll(products, 'Productos', ['window.productosModule', 'window.cargarProductos', 'window.mostrarModalProducto', 'window.editarProducto', 'window.eliminarProducto']);
@@ -123,5 +126,6 @@ if (index.indexOf('js/legacy-data-normalization-v1.js') > index.indexOf('js/modu
 if (index.indexOf('js/store-stock-v1.js') > index.indexOf('js/inventory-store-view-v1.js')) throw new Error('Stock por local debe cargar antes de la vista de inventario');
 if (index.indexOf('js/store-stock-v1.js') > index.indexOf('js/sales-store-ui-v1.js')) throw new Error('Stock por local debe cargar antes de la protección de ventas');
 if (index.indexOf('js/store-stock-v1.js') > index.indexOf('js/reports-store-view-v1.js')) throw new Error('Stock por local debe cargar antes del reporte de existencias');
+if (index.indexOf('js/scanner-config-v2.js') < index.indexOf('js/configuracion-v1.js')) throw new Error('Scanner V2 debe cargar después de Configuración');
 
-console.log('✅ Module audit OK: Login, Dashboard, Ventas, Productos, Inventario, Servicio, Clientes, Usuarios, Reportes, Traspasos, Corte, Configuración, SQLite y sincronización');
+console.log('✅ Module audit OK: Login, Dashboard, Ventas, Productos, Inventario, Servicio, Clientes, Usuarios, Reportes, Traspasos, Corte, Configuración, Scanner, SQLite y sincronización');
