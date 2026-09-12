@@ -31,6 +31,7 @@ const runtimeFiles = [
   'js/inventory-store-view-v1.js',
   'js/product-stock-guard-v1.js',
   'js/sales-store-ui-v1.js',
+  'js/reports-store-view-v1.js',
   'js/legacy-data-normalization-v1.js',
   'js/native-print-v1.js',
   'js/corte-print-pilot.js',
@@ -61,14 +62,14 @@ requireAll(sales, 'Ventas', ['window.ventasModule', 'window.cargarProductosVenta
 const salesDb = requireFile('js/utils/database-sales-v3.js');
 requireAll(salesDb, 'Ventas DB', ['Stock insuficiente', 'registrarMovimientoInventario', 'descuento_monto', 'registrarMovimientoPlaza']);
 const salesStore = read('js/sales-store-ui-v1.js');
-requireAll(salesStore, 'Ventas por local', ['loto_store_id', 'getStocksByStore', 'requireStation', 'Local ${store}', 'window.finalizarVenta']);
+requireAll(salesStore, 'Ventas por local', ['loto_store_id', 'getStocksByStore', 'requireStation', 'Local ${store}', 'window.finalizarVenta', 'Sin existencias']);
 
 const products = read('js/modules/productos-v2.js');
 requireAll(products, 'Productos', ['window.productosModule', 'window.cargarProductos', 'window.mostrarModalProducto', 'window.editarProducto', 'window.eliminarProducto']);
 const pricing = requireFile('js/utils/database-pricing-v4.js');
 requireAll(pricing, 'Precios', ['MARKUP = 1.05', 'precio_base_cliente', 'getPrecioPublicoDesdeBase']);
 const productGuard = read('js/product-stock-guard-v1.js');
-requireAll(productGuard, 'Productos stock guard', ['Inventario', 'Traspasos', 'setInventoryFieldsLocked']);
+requireAll(productGuard, 'Productos stock guard', ['Inventario', 'Traspasos', 'setInventoryFieldsLocked', 'No se puede eliminar', 'getStocksByStore']);
 
 const inventory = read('js/modules/inventario.js');
 requireAll(inventory, 'Inventario', ['window.inventarioModule', 'window.cargarInventario', 'window.abrirModalAjusteStock']);
@@ -92,6 +93,8 @@ const reports = read('js/modules/reportes-v2.js');
 requireAll(reports, 'Reportes', ['window.reportesModule', 'window.cambiarReporte', 'auditoria', 'plaza', 'existencias']);
 const inventoryReport = read('js/inventory-report-v1.js');
 requireAll(inventoryReport, 'Reporte inventario', ['getMovimientosInventario', 'getTraspasos', 'stock_anterior', 'stock_nuevo']);
+const storeReport = read('js/reports-store-view-v1.js');
+requireAll(storeReport, 'Reporte existencias por local', ['window.generarReporteExistencias', 'Local 14', 'Local 20', 'unassigned', 'getStocksByStore']);
 const normalization = read('js/legacy-data-normalization-v1.js');
 requireAll(normalization, 'Datos legacy', ['Efectivo', 'Tarjeta', 'Transferencia', 'Cuenta Plaza']);
 
@@ -119,5 +122,6 @@ requireAll(desktopStorage, 'SQLite', ['commitCollectionSync', 'MANAGED_COLLECTIO
 if (index.indexOf('js/legacy-data-normalization-v1.js') > index.indexOf('js/modules/dashboard.js')) throw new Error('Normalización legacy debe cargar antes de módulos');
 if (index.indexOf('js/store-stock-v1.js') > index.indexOf('js/inventory-store-view-v1.js')) throw new Error('Stock por local debe cargar antes de la vista de inventario');
 if (index.indexOf('js/store-stock-v1.js') > index.indexOf('js/sales-store-ui-v1.js')) throw new Error('Stock por local debe cargar antes de la protección de ventas');
+if (index.indexOf('js/store-stock-v1.js') > index.indexOf('js/reports-store-view-v1.js')) throw new Error('Stock por local debe cargar antes del reporte de existencias');
 
 console.log('✅ Module audit OK: Login, Dashboard, Ventas, Productos, Inventario, Servicio, Clientes, Usuarios, Reportes, Traspasos, Corte, Configuración, SQLite y sincronización');
