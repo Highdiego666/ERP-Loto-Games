@@ -27,9 +27,9 @@ jobs:
         shell: pwsh
         run: npm ci
 
-      - name: Mark candidate as 0.9.2
+      - name: Mark candidate as 0.9.3
         shell: pwsh
-        run: npm version 0.9.2 --no-git-tag-version
+        run: npm version 0.9.3 --no-git-tag-version
 
       - name: Validate application
         shell: pwsh
@@ -42,6 +42,7 @@ jobs:
           }
           node scripts/validate-release.mjs
           node scripts/validate-pilot.mjs
+          node scripts/validate-modules.mjs
 
       - name: Build NSIS candidate installer
         shell: pwsh
@@ -52,7 +53,7 @@ jobs:
       - name: Upload Windows candidate
         uses: actions/upload-artifact@v4
         with:
-          name: LotoGames-0.9.2-Windows-x64-employee-pilot
+          name: LotoGames-0.9.3-Windows-x64-employee-pilot
           path: |
             dist/*.exe
             dist/*.yml
