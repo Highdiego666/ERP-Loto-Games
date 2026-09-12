@@ -2,7 +2,7 @@ name: Windows candidate build
 
 on:
   push:
-    branches: [vnext/windows-release]
+    branches: [vnext/windows-release, stabilize/employee-pilot]
   workflow_dispatch:
 
 permissions:
@@ -27,9 +27,9 @@ jobs:
         shell: pwsh
         run: npm ci
 
-      - name: Mark candidate as 0.9.0
+      - name: Mark candidate as 0.9.1
         shell: pwsh
-        run: npm version 0.9.0 --no-git-tag-version
+        run: npm version 0.9.1 --no-git-tag-version
 
       - name: Validate application
         shell: pwsh
@@ -41,6 +41,7 @@ jobs:
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
           node scripts/validate-release.mjs
+          node scripts/validate-pilot.mjs
 
       - name: Build NSIS candidate installer
         shell: pwsh
@@ -51,7 +52,7 @@ jobs:
       - name: Upload Windows candidate
         uses: actions/upload-artifact@v4
         with:
-          name: LotoGames-0.9.0-Windows-x64-candidate
+          name: LotoGames-0.9.1-Windows-x64-employee-pilot
           path: |
             dist/*.exe
             dist/*.yml
