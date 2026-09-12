@@ -51,6 +51,7 @@
 
   const PAGE_SIZE = 1000;
   const MAX_PUSH_BATCHES = 100;
+  const RECENT_EDIT_MS = 6000;
   let currentSync = null;
   let timer = null;
 
@@ -81,6 +82,41 @@
       el.innerHTML = `<span class="db-dot"></span><span>${text}</span>`;
       el.title = detail;
     }
+  }
+
+  function hasLocalUsers() {
+    try {
+      return (window.LotoDesktopStorage?.getCollection?.('usuarios') || []).length > 0;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function isEditableElement(element) {
+    if (!element) return false;
+    const tag = String(element.tagName || '').toLowerCase();
+    return ['input', 'textarea', 'select'].includes(tag) || !!element.isContentEditable;
+  }
+
+  function isVisible(element) {
+    if (!element) return false;
+    const style = getComputedStyle(element);
+    return style.display !== 'none' && style.visibility !== 'hidden' && style.pointerEvents !== 'none';
+  }
+
+  // Un pull reemplaza snapshots locales completos. No lo hacemos mientras una
+  // persona está capturando datos: primero subimos cambios pendientes y dejamos
+  // la descarga para el siguiente ciclo. La primera vinculación queda excluida.
+  function shouldDeferPull() {
+    if (!hasLocalUsers()) return false;
+
+    const openModal = Array.from(document.querySelectorAll('.modal')).some(isVisible);
+    const cloudOverlay = isVisible(document.getElementById('cloudPairOverlay'));
+    const active = document.activeElement;
+    const recentInteraction = (Date.now() - Number(window.__lotoLastInteractionAt || 0)) < RECENT_EDIT_MS;
+    const activeEditing = isEditableElement(active) && recentInteraction;
+
+    return openModal || cloudOverlay || activeEditing;
   }
 
   async function fetchWholeTable(client, entity) {
@@ -212,6 +248,7 @@
       return { ok: true, localOnly: true };
     }
 
+    const startedAt = performance.now();
     try {
       setStatus('checking', 'Verificando nube…');
       await authorizeCloud(client);
@@ -226,15 +263,21 @@
         return { ok: false, pushed, pending: true };
       }
 
+      if (shouldDeferPull()) {
+        setStatus('local', 'Local · edición protegida', 'La descarga desde la nube se pospuso para no interferir con un formulario abierto.');
+        return { ok: true, pushed, deferredPull: true, durationMs: Math.round(performance.now() - startedAt) };
+      }
+
       const pulled = await pullCloudSnapshot(client);
-      setStatus('ok', 'Local + nube · sincronizado');
-      return { ok: true, pushed, pulled };
+      const durationMs = Math.round(performance.now() - startedAt);
+      setStatus('ok', 'Local + nube · sincronizado', `Última sincronización: ${durationMs} ms`);
+      return { ok: true, pushed, pulled, durationMs };
     } catch (error) {
       console.warn('Sincronización pendiente:', error);
       const message = error?.message || String(error);
       const unlinked = /no vinculada|administradora activa|jwt|auth|permission|policy|rls|row-level|not authorized|unauthorized/i.test(message);
       setStatus('local', unlinked ? 'Local · nube sin autorizar' : 'Local · cambios pendientes', message);
-      return { ok: false, error: message };
+      return { ok: false, error: message, durationMs: Math.round(performance.now() - startedAt) };
     }
   }
 
@@ -254,6 +297,6 @@
     setTimeout(syncOnce, 1200);
   }
 
-  window.LotoSync = { syncOnce, start, authorizeCloud, pullCloudSnapshot };
+  window.LotoSync = { syncOnce, start, authorizeCloud, pullCloudSnapshot, shouldDeferPull };
   start();
 })();
