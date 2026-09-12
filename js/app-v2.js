@@ -20,7 +20,8 @@
     usuarios: { nombre: 'Usuarios', descripcion: 'Usuarios, roles y privilegios' },
     reportes: { nombre: 'Reportes', descripcion: 'Ventas, inventario y movimientos' },
     traspasos: { nombre: 'Traspasos', descripcion: 'Movimientos entre almacenes' },
-    corte: { nombre: 'Corte de Caja', descripcion: 'Cierre y resumen de caja' }
+    corte: { nombre: 'Corte de Caja', descripcion: 'Cierre y resumen de caja' },
+    configuracion: { nombre: 'Configuración', descripcion: 'Impresoras, lector y diagnóstico de la estación' }
   };
 
   const rolesPorDefecto = {
@@ -142,6 +143,7 @@
         await window.cargarTraspasos?.();
         break;
       case 'corte': await window.cargarCorte?.(); break;
+      case 'configuracion': await window.cargarConfiguracion?.(); break;
     }
   }
 
@@ -251,5 +253,5 @@
     else await mostrarLogin();
   });
 
-  console.log('✅ App V2 cargado: shell persistente + permisos + diagnóstico V1');
+  console.log('✅ App V2 cargado: shell persistente + permisos + diagnóstico V1 + configuración nativa');
 })();
