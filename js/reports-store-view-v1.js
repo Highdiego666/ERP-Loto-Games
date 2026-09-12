@@ -1,6 +1,6 @@
 // ============================================
-// LOTO GAMES - REPORTE DE EXISTENCIAS POR LOCAL V1
-// Local 14 / Local 20 / total, sin perder compatibilidad con Reportes V2.
+// LOTO GAMES - REPORTES CONSISTENTES V2
+// Fechas locales + existencias Local 14 / Local 20 / total.
 // ============================================
 
 (function () {
@@ -10,6 +10,7 @@
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[char]));
   const money = value => Number(value || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
+  let filteredSales = [];
 
   function splitStock(product) {
     if (typeof window.DB?.getStocksByStore === 'function') return window.DB.getStocksByStore(product);
@@ -22,6 +23,71 @@
       total
     };
   }
+
+  function localBoundary(dateValue, end = false) {
+    if (!dateValue) return null;
+    const value = new Date(`${dateValue}T${end ? '23:59:59.999' : '00:00:00.000'}`);
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+
+  window.filtrarVentasPeriodo = async () => {
+    const startRaw = document.getElementById('repFechaInicio')?.value || '';
+    const endRaw = document.getElementById('repFechaFin')?.value || '';
+    const start = localBoundary(startRaw, false);
+    const end = localBoundary(endRaw, true);
+    let sales = await window.DB.getVentas();
+
+    sales = (sales || []).filter(sale => {
+      const date = new Date(sale.fecha);
+      if (Number.isNaN(date.getTime())) return false;
+      if (start && date < start) return false;
+      if (end && date > end) return false;
+      return true;
+    });
+    filteredSales = sales;
+
+    const total = sales.reduce((sum, sale) => sum + Number(sale.total || 0), 0);
+    const container = document.getElementById('tablaVentasPeriodo');
+    if (!container) return;
+    container.innerHTML = `
+      <div style="display:flex;gap:20px;margin-bottom:15px;flex-wrap:wrap;">
+        <span><strong>Total Ventas:</strong> ${money(total)}</span>
+        <span><strong>Número:</strong> ${sales.length}</span>
+        <span><strong>Promedio:</strong> ${money(sales.length ? total / sales.length : 0)}</span>
+      </div>
+      <table><thead><tr><th>ID</th><th>Fecha</th><th>Items</th><th>Total</th><th>Método</th><th>Vendedor</th></tr></thead><tbody>
+        ${sales.map(sale => `<tr>
+          <td>#${esc(sale.id)}</td>
+          <td>${new Date(sale.fecha).toLocaleString('es-MX')}</td>
+          <td>${Array.isArray(sale.items) ? sale.items.length : 0}</td>
+          <td><strong>${money(sale.total || 0)}</strong>${sale.total == null ? '<br><small style="color:var(--warning);">registro histórico sin total</small>' : ''}</td>
+          <td>${esc(sale.metodo_pago || sale.metodoPago || 'Efectivo')}</td>
+          <td>${esc(sale.usuario || 'Admin')}</td>
+        </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;">Sin datos</td></tr>'}
+      </tbody></table>`;
+  };
+
+  window.exportarVentasCSV = () => {
+    if (!filteredSales.length) return alert('No hay datos para exportar.');
+    const csvEsc = value => `"${String(value ?? '').replace(/"/g, '""')}"`;
+    const rows = filteredSales.map(sale => [
+      sale.id,
+      new Date(sale.fecha).toLocaleString('es-MX'),
+      sale.total == null ? '' : Number(sale.total),
+      sale.metodo_pago || sale.metodoPago || 'Efectivo',
+      sale.usuario || 'Admin'
+    ]);
+    const csv = [['ID','Fecha','Total','Método','Vendedor'], ...rows]
+      .map(row => row.map(csvEsc).join(','))
+      .join('\r\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `ventas_${new Date().toISOString().slice(0,10)}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
 
   window.generarReporteExistencias = async container => {
     const products = await window.DB.getProductos();
@@ -64,5 +130,5 @@
       </div>`;
   };
 
-  console.log('✅ Reportes: existencias Local 14 / Local 20 / total');
+  console.log('✅ Reportes V2: fechas locales + existencias Local 14 / Local 20 / total');
 })();
