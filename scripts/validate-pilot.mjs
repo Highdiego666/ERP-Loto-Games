@@ -90,7 +90,7 @@ if (/\bwindow\.open\s*\(/.test(executableText(stability))) {
 }
 
 const nativePrint = read('js/native-print-v1.js');
-for (const contract of ['LotoNativePrint', 'loto_ticket_printer', 'loto_label_printer', 'printHtml']) {
+for (const contract of ['LotoNativePrint', 'printHtml', 'loto_${kind}_printer', 'loto_${kind}_silent', 'loto_${kind}_copies']) {
   if (!nativePrint.includes(contract)) throw new Error(`Impresión nativa incompleta: ${contract}`);
 }
 if (/\bwindow\.open\s*\(/.test(executableText(nativePrint))) {
@@ -113,7 +113,16 @@ for (const contract of ["configuracion: {", "case 'configuracion'", "window.carg
 }
 
 const config = read('js/configuracion-v1.js');
-for (const contract of ['window.configuracionModule', 'Miniprinter / tickets', 'Impresora de etiquetas', 'LotoRuntimeHealth', 'probarTicketConfiguracion', 'window.cargarConfiguracion']) {
+for (const contract of [
+  'window.configuracionModule',
+  'Miniprinter / tickets',
+  'Impresora de etiquetas',
+  'LotoRuntimeHealth',
+  'probarTicketConfiguracion',
+  'window.cargarConfiguracion',
+  'loto_ticket_printer',
+  'loto_label_printer'
+]) {
   if (!config.includes(contract)) throw new Error(`Configuración de piloto incompleta: ${contract}`);
 }
 
