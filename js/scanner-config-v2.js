@@ -62,12 +62,13 @@
     document.addEventListener('keydown', window.__scannerV5Handler);
   };
 
-  // Cuando la búsqueda está enfocada, el scanner escribe directamente en ese
-  // input. Aceptamos Enter y Tab según configuración y procesamos el código exacto.
+  // En el buscador, Enter conserva la búsqueda manual original (también resuelve
+  // SKU/código exacto). Tab se usa como terminador alternativo si el lector lo envía.
   const originalSearchKey = window.teclaBusquedaVentaV2;
   if (typeof originalSearchKey === 'function') {
     window.teclaBusquedaVentaV2 = event => {
-      if (isSuffix(event.key)) {
+      if (event.key === 'Enter') return originalSearchKey(event);
+      if (event.key === 'Tab' && ['Tab','Auto'].includes(suffix())) {
         event.preventDefault();
         const code = String(event.target?.value || '').trim();
         if (code) window.procesarCodigoEscaneadoV2?.(code);
