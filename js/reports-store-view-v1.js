@@ -1,5 +1,5 @@
 // ============================================
-// LOTO GAMES - REPORTES CONSISTENTES V2
+// LOTO GAMES - REPORTES CONSISTENTES V3
 // Fechas locales + existencias Local 14 / Local 20 / total.
 // ============================================
 
@@ -24,11 +24,30 @@
     };
   }
 
+  function localDateKey(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  }
+
   function localBoundary(dateValue, end = false) {
     if (!dateValue) return null;
     const value = new Date(`${dateValue}T${end ? '23:59:59.999' : '00:00:00.000'}`);
     return Number.isNaN(value.getTime()) ? null : value;
   }
+
+  window.generarReporteVentas = async container => {
+    const today = new Date();
+    const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    start.setDate(start.getDate() - 30);
+    container.innerHTML = `
+      <div style="display:flex;gap:15px;flex-wrap:wrap;margin-bottom:20px;align-items:flex-end;">
+        <div><label>Desde</label><input type="date" id="repFechaInicio" class="form-control" style="width:auto;" value="${localDateKey(start)}"></div>
+        <div><label>Hasta</label><input type="date" id="repFechaFin" class="form-control" style="width:auto;" value="${localDateKey(today)}"></div>
+        <div><button class="btn btn-primary" onclick="window.filtrarVentasPeriodo()">Filtrar</button></div>
+        <div><button class="btn btn-success" onclick="window.exportarVentasCSV()">📥 Exportar CSV</button></div>
+      </div>
+      <div id="tablaVentasPeriodo" class="table-container"></div>`;
+    await window.filtrarVentasPeriodo();
+  };
 
   window.filtrarVentasPeriodo = async () => {
     const startRaw = document.getElementById('repFechaInicio')?.value || '';
@@ -84,7 +103,7 @@
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = `ventas_${new Date().toISOString().slice(0,10)}.csv`;
+    anchor.download = `ventas_${localDateKey(new Date())}.csv`;
     anchor.click();
     URL.revokeObjectURL(url);
   };
@@ -130,5 +149,5 @@
       </div>`;
   };
 
-  console.log('✅ Reportes V2: fechas locales + existencias Local 14 / Local 20 / total');
+  console.log('✅ Reportes V3: fechas locales + existencias Local 14 / Local 20 / total');
 })();
