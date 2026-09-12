@@ -196,6 +196,81 @@ function createPreUpdateBackup(version = 'desconocida') {
   return target;
 }
 
+async function listPrinters(webContents) {
+  const printers = await webContents.getPrintersAsync();
+  return printers.map(printer => ({
+    name: String(printer.name || ''),
+    displayName: String(printer.displayName || printer.name || ''),
+    description: String(printer.description || ''),
+    status: Number(printer.status || 0),
+    isDefault: !!printer.isDefault
+  }));
+}
+
+async function printHtml(sender, request = {}) {
+  const html = String(request?.html || '');
+  if (!html || html.length > 1_000_000) {
+    throw new Error('Documento de impresión vacío o demasiado grande');
+  }
+
+  const deviceName = String(request?.deviceName || '').trim();
+  const silent = !!request?.silent;
+  const copies = Math.max(1, Math.min(Number(request?.copies) || 1, 20));
+  const printers = await sender.getPrintersAsync();
+  if (deviceName && !printers.some(printer => printer.name === deviceName)) {
+    throw new Error(`La impresora configurada ya no está disponible: ${deviceName}`);
+  }
+
+  const printWindow = new BrowserWindow({
+    show: false,
+    width: 420,
+    height: 800,
+    backgroundColor: '#ffffff',
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      webSecurity: true,
+      javascript: false
+    }
+  });
+
+  printWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+
+  try {
+    const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+    await printWindow.loadURL(dataUrl);
+
+    const options = {
+      silent,
+      printBackground: true,
+      color: false,
+      copies,
+      margins: { marginType: 'none' },
+      landscape: false
+    };
+    if (deviceName) options.deviceName = deviceName;
+
+    const pageSize = request?.pageSize;
+    if (pageSize && Number(pageSize.width) >= 353 && Number(pageSize.height) >= 353) {
+      options.pageSize = {
+        width: Math.round(Number(pageSize.width)),
+        height: Math.round(Number(pageSize.height))
+      };
+    } else {
+      options.usePrinterDefaultPageSize = true;
+    }
+
+    return await new Promise(resolve => {
+      printWindow.webContents.print(options, (success, failureReason) => {
+        resolve({ success: !!success, failureReason: failureReason || null });
+      });
+    });
+  } finally {
+    if (!printWindow.isDestroyed()) printWindow.destroy();
+  }
+}
+
 function registerIpc() {
   ipcMain.on('storage:load-all-sync', event => {
     try {
@@ -237,6 +312,9 @@ function registerIpc() {
       .run(String(message || '').slice(0, 2000), Number(id));
     return true;
   });
+
+  ipcMain.handle('printer:list', event => listPrinters(event.sender));
+  ipcMain.handle('printer:print-html', (event, request) => printHtml(event.sender, request));
 
   ipcMain.handle('update:status', () => getUpdateState());
   ipcMain.handle('update:check', () => checkForUpdates());
