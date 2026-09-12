@@ -28,6 +28,10 @@ contextBridge.exposeInMainWorld('lotoDesktop', {
     complete: id => ipcRenderer.invoke('sync:complete', id),
     fail: (id, message) => ipcRenderer.invoke('sync:fail', id, message)
   },
+  printer: {
+    list: () => ipcRenderer.invoke('printer:list'),
+    printHtml: request => ipcRenderer.invoke('printer:print-html', request)
+  },
   update: {
     status: () => ipcRenderer.invoke('update:status'),
     check: () => ipcRenderer.invoke('update:check'),
