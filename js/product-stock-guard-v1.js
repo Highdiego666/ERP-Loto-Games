@@ -1,5 +1,5 @@
 // ============================================
-// LOTO GAMES - GUARDA DE STOCK EN PRODUCTOS V2
+// LOTO GAMES - GUARDA DE STOCK EN PRODUCTOS V3
 // El catálogo edita datos/precios; Inventario y Traspasos controlan existencias.
 // ============================================
 
@@ -52,6 +52,44 @@
     };
   }
 
+  // El submit heredado lee stock/local manualmente aunque los controles estén
+  // disabled. Interceptamos sólo EDICIONES para garantizar que esos campos no
+  // viajen a DB.updateProducto. Los productos nuevos conservan el flujo original.
+  document.addEventListener('submit', async event => {
+    if (event.target?.id !== 'formProducto') return;
+    const id = document.getElementById('productoId')?.value;
+    if (!id) return;
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+
+    const data = {
+      nombre: document.getElementById('prodNombre')?.value.trim() || '',
+      categoria: document.getElementById('prodCategoria')?.value || 'consolas',
+      tipo: document.getElementById('prodTipo')?.value || 'nueva',
+      precio_cliente: Number(document.getElementById('prodPrecioCliente')?.value),
+      precio_mayorista: Number(document.getElementById('prodPrecioMayorista')?.value),
+      precio_plaza: Number(document.getElementById('prodPrecioPlaza')?.value)
+    };
+
+    if (!data.nombre) return alert('El nombre del producto es obligatorio.');
+    if ([data.precio_cliente, data.precio_mayorista, data.precio_plaza].some(value => !Number.isFinite(value) || value < 0)) {
+      return alert('Revisa los tres precios.');
+    }
+
+    try {
+      const updated = await window.DB.updateProducto(id, data);
+      if (updated === false) throw new Error('El producto ya no existe en la copia local.');
+      window.cerrarModalProducto?.();
+      await window.cargarProductos?.();
+      await window.cargarProductosVenta?.();
+      await window.cargarInventario?.();
+    } catch (error) {
+      console.error(error);
+      alert('❌ Error guardando producto: ' + (error?.message || error));
+    }
+  }, true);
+
   const originalDelete = window.eliminarProducto;
   if (typeof originalDelete === 'function') {
     window.eliminarProducto = async id => {
@@ -76,5 +114,5 @@
     };
   }
 
-  console.log('✅ Productos: stock protegido; borrado bloqueado con existencias; ajustes en Inventario y movimientos en Traspasos');
+  console.log('✅ Productos: edición sin stock/local; borrado bloqueado con existencias');
 })();
