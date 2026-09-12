@@ -30,6 +30,7 @@ const runtimeFiles = [
   'js/store-stock-v1.js',
   'js/inventory-store-view-v1.js',
   'js/product-stock-guard-v1.js',
+  'js/client-delete-guard-v1.js',
   'js/sales-store-ui-v1.js',
   'js/reports-store-view-v1.js',
   'js/scanner-config-v2.js',
@@ -72,7 +73,7 @@ requireAll(products, 'Productos', ['window.productosModule', 'window.cargarProdu
 const pricing = requireFile('js/utils/database-pricing-v4.js');
 requireAll(pricing, 'Precios', ['MARKUP = 1.05', 'precio_base_cliente', 'getPrecioPublicoDesdeBase']);
 const productGuard = read('js/product-stock-guard-v1.js');
-requireAll(productGuard, 'Productos stock guard', ['Inventario', 'Traspasos', 'setInventoryFieldsLocked', 'No se puede eliminar', 'getStocksByStore']);
+requireAll(productGuard, 'Productos stock guard', ['Inventario', 'Traspasos', 'setInventoryFieldsLocked', 'No se puede eliminar', 'getStocksByStore', 'event.stopImmediatePropagation']);
 
 const inventory = read('js/modules/inventario.js');
 requireAll(inventory, 'Inventario', ['window.inventarioModule', 'window.cargarInventario', 'window.abrirModalAjusteStock']);
@@ -88,6 +89,8 @@ requireAll(stability, 'Servicio búsqueda reparada', ['window.buscarServicio', '
 
 const clients = read('js/modules/clientes-v2.js');
 requireAll(clients, 'Clientes', ['window.clientesModule', 'window.cargarClientes', 'window.abrirCuentaPlaza', 'window.registrarAbonoPlaza', 'credito_habilitado']);
+const clientGuard = read('js/client-delete-guard-v1.js');
+requireAll(clientGuard, 'Clientes historial', ['window.DB.getServicios', 'orden(es) de servicio', 'historial técnico']);
 
 const users = read('js/modules/usuarios-v2.js');
 requireAll(users, 'Usuarios', ['window.usuariosModule', 'window.cargarUsuarios', 'Debe existir al menos un administrador activo', 'duplicateEmail', 'createPassword', 'createPin']);
@@ -127,5 +130,6 @@ if (index.indexOf('js/store-stock-v1.js') > index.indexOf('js/inventory-store-vi
 if (index.indexOf('js/store-stock-v1.js') > index.indexOf('js/sales-store-ui-v1.js')) throw new Error('Stock por local debe cargar antes de la protección de ventas');
 if (index.indexOf('js/store-stock-v1.js') > index.indexOf('js/reports-store-view-v1.js')) throw new Error('Stock por local debe cargar antes del reporte de existencias');
 if (index.indexOf('js/scanner-config-v2.js') < index.indexOf('js/configuracion-v1.js')) throw new Error('Scanner V2 debe cargar después de Configuración');
+if (index.indexOf('js/client-delete-guard-v1.js') < index.indexOf('js/modules/clientes-v2.js')) throw new Error('Guarda de clientes debe cargar después del módulo Clientes');
 
 console.log('✅ Module audit OK: Login, Dashboard, Ventas, Productos, Inventario, Servicio, Clientes, Usuarios, Reportes, Traspasos, Corte, Configuración, Scanner, SQLite y sincronización');
