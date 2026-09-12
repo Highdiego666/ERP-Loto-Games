@@ -31,6 +31,7 @@ const runtimeFiles = [
   'js/inventory-store-view-v1.js',
   'js/product-stock-guard-v1.js',
   'js/client-delete-guard-v1.js',
+  'js/user-pin-guard-v1.js',
   'js/sales-store-ui-v1.js',
   'js/reports-store-view-v1.js',
   'js/scanner-config-v2.js',
@@ -94,13 +95,15 @@ requireAll(clientGuard, 'Clientes historial', ['window.DB.getServicios', 'orden(
 
 const users = read('js/modules/usuarios-v2.js');
 requireAll(users, 'Usuarios', ['window.usuariosModule', 'window.cargarUsuarios', 'Debe existir al menos un administrador activo', 'duplicateEmail', 'createPassword', 'createPin']);
+const pinGuard = read('js/user-pin-guard-v1.js');
+requireAll(pinGuard, 'Usuarios PIN único', ['originalCreatePin', 'originalVerifyPin', 'Ese PIN ya está asignado a otro usuario']);
 
 const reports = read('js/modules/reportes-v2.js');
 requireAll(reports, 'Reportes', ['window.reportesModule', 'window.cambiarReporte', 'auditoria', 'plaza', 'existencias']);
 const inventoryReport = read('js/inventory-report-v1.js');
 requireAll(inventoryReport, 'Reporte inventario', ['getMovimientosInventario', 'getTraspasos', 'stock_anterior', 'stock_nuevo']);
 const storeReport = read('js/reports-store-view-v1.js');
-requireAll(storeReport, 'Reporte existencias por local', ['window.generarReporteExistencias', 'Local 14', 'Local 20', 'unassigned', 'getStocksByStore']);
+requireAll(storeReport, 'Reporte existencias por local', ['window.generarReporteExistencias', 'Local 14', 'Local 20', 'unassigned', 'getStocksByStore', "T${end ? '23:59:59.999' : '00:00:00.000'}"]);
 const normalization = read('js/legacy-data-normalization-v1.js');
 requireAll(normalization, 'Datos legacy', ['Efectivo', 'Tarjeta', 'Transferencia', 'Cuenta Plaza']);
 
@@ -131,5 +134,6 @@ if (index.indexOf('js/store-stock-v1.js') > index.indexOf('js/sales-store-ui-v1.
 if (index.indexOf('js/store-stock-v1.js') > index.indexOf('js/reports-store-view-v1.js')) throw new Error('Stock por local debe cargar antes del reporte de existencias');
 if (index.indexOf('js/scanner-config-v2.js') < index.indexOf('js/configuracion-v1.js')) throw new Error('Scanner V2 debe cargar después de Configuración');
 if (index.indexOf('js/client-delete-guard-v1.js') < index.indexOf('js/modules/clientes-v2.js')) throw new Error('Guarda de clientes debe cargar después del módulo Clientes');
+if (index.indexOf('js/user-pin-guard-v1.js') < index.indexOf('js/modules/usuarios-v2.js')) throw new Error('Guarda de PIN debe cargar después del módulo Usuarios');
 
 console.log('✅ Module audit OK: Login, Dashboard, Ventas, Productos, Inventario, Servicio, Clientes, Usuarios, Reportes, Traspasos, Corte, Configuración, Scanner, SQLite y sincronización');
