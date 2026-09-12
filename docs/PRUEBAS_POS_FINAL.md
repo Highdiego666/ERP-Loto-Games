@@ -1,88 +1,154 @@
-# Plan de pruebas — LOTO GAMES POS final
+# Plan de pruebas — LOTO GAMES POS pre-piloto
 
-> No hacer merge a `main` hasta completar esta lista.
+> Esta lista es obligatoria antes de entregar una candidata a empleados. Compilar un `.exe` no cuenta como prueba funcional.
 
-## 1. Prueba segura sin Supabase
+## 1. Build que se está probando
 
-Levantar el proyecto en localhost y abrir:
+Registrar siempre:
 
-`http://127.0.0.1:8080/?demo=1`
+- commit / rama de la candidata;
+- versión mostrada por el instalador;
+- PC donde se probó;
+- impresora utilizada;
+- si había Internet o se trabajó offline.
 
-Con `?demo=1` la aplicación no se conecta a Supabase y usa sólo `localStorage` del navegador.
+La rama de estabilización debe partir de `vnext/windows-release` y conservar SQLite local como fuente primaria.
 
-## 2. Acceso y teclado
+## 2. Prueba de estabilidad prolongada
 
-- Crear el primer administrador.
-- Cerrar sesión.
-- Ingresar con correo/contraseña usando teclado físico.
-- Ingresar con PIN usando teclado físico.
-- Crear un vendedor y restringir sus módulos.
-- Confirmar que el vendedor no ve módulos no autorizados.
-- Probar F2 (POS/búsqueda), F4 (finalizar venta), Esc (cerrar modal), Alt+1…9 y Ctrl+Enter.
+Mantener la aplicación abierta al menos 30 minutos.
 
-## 3. Productos
+Durante ese período, repetir varias veces:
 
-- Crear producto con precio Cliente, Mayorista y Plaza diferentes.
-- Editar el producto sin perder SKU, código, categoría ni stock.
-- Ajustar únicamente stock desde Inventario y comprobar que el resto de los campos NO se borra.
-- Imprimir una etiqueta de prueba.
+- abrir y cerrar formularios;
+- escribir en `input`, `textarea` y `select`;
+- cambiar entre Clientes, Productos, Ventas, Inventario, Servicio, Usuarios y Traspasos;
+- dejar pasar múltiples ciclos de sincronización;
+- comprobar que ningún campo deja de aceptar entrada;
+- comprobar que no aparece un overlay invisible que capture el foco.
 
-## 4. Punto de Venta
+Si ocurre un fallo, abrir consola de desarrollo en una build de diagnóstico y ejecutar:
 
-- Confirmar que productos ocupan la mayor parte de la pantalla y carrito queda a la derecha.
-- Agregar productos por clic.
+```js
+window.LotoRuntimeHealth?.snapshot()
+window.LotoRuntimeHealth?.getErrors()
+```
+
+No continuar el piloto si la aplicación pierde capacidad de edición.
+
+## 3. Usuarios y acceso
+
+- Ingresar con administrador.
+- Crear un vendedor y un técnico de prueba.
+- Confirmar privilegios por módulo.
+- Cerrar y abrir la aplicación y verificar que el login local sigue funcionando offline.
+- Confirmar que no se guardan nuevas contraseñas ni PIN en texto plano.
+- No eliminar ni desactivar el último administrador válido.
+
+## 4. Productos
+
+- Crear un producto con precios Cliente, Mayorista y Plaza.
+- Editarlo sin perder SKU, código, categoría, local ni stock.
+- Buscar por nombre, SKU y código.
+- Ajustar stock desde Inventario.
+- Confirmar que el ajuste genera un movimiento de inventario con stock anterior, nuevo, motivo y usuario.
+- Imprimir una etiqueta CODE128 desde el ejecutable y confirmar que ya no solicita permiso de ventanas emergentes.
+
+## 5. Inventario
+
+- Ajustar stock hacia arriba y hacia abajo.
+- Confirmar que no se alteran nombre/precios/SKU al tocar sólo stock.
+- Revisar Reportes → Movimientos.
+- Verificar que una entrada se registra como `entrada` y una reducción como `salida`.
+
+La importación masiva debe considerarse CSV mientras no exista un parser XLSX real. No anunciar soporte `.xlsx/.xls` en producción hasta implementarlo.
+
+## 6. Punto de Venta
+
+- Agregar producto por clic.
 - Buscar por nombre/SKU.
-- Probar código de barras si hay escáner disponible.
+- Escanear un código de barras real.
+- Confirmar que un código exacto agrega el producto una sola vez.
 - Cambiar cantidades.
-- Editar precio sólo cuando se solicita explícitamente desde el carrito.
-- Venta con precio Cliente.
-- Venta con precio Mayorista.
-- Venta con precio Plaza.
-- Confirmar que el stock baja sólo por la cantidad vendida.
+- Probar Cliente / Mayorista / Plaza.
+- Probar venta rápida.
+- Probar descuento F6.
+- Finalizar venta y verificar reducción exacta de stock.
+- Reiniciar la aplicación y confirmar que la venta sigue existiendo.
 
-## 5. Locatarios / Cuenta Plaza
+## 7. Ticket y miniprinter
 
-- Crear comprador tipo `Locatario / Plaza` con crédito habilitado.
-- Seleccionarlo en POS y confirmar selección automática de precio Plaza.
-- Elegir `Cuenta Plaza` como método de pago.
-- Finalizar venta.
-- Abrir Clientes → Cuenta del locatario.
-- Confirmar cargo, artículos, fecha, vendedor y saldo.
-- Hacer otra salida el mismo día y confirmar historial acumulado.
-- Registrar un abono parcial.
-- Confirmar nuevo saldo.
-- Revisar Reportes → Cuenta Plaza.
+- Finalizar una venta.
+- Elegir imprimir ticket.
+- Confirmar que el ejecutable abre el diálogo de impresión del sistema sin usar popups.
+- Elegir la miniprinter instalada en Windows.
+- Probar papel de 58 mm y 80 mm según el equipo disponible.
+- Verificar legibilidad de nombre, cantidades, precios, total, método de pago, vendedor y fecha.
 
-## 6. Traspasos
+La selección persistente y la impresión silenciosa por impresora configurada quedan como siguiente etapa del módulo Configuración.
 
-- Registrar un traspaso entre dos ubicaciones distintas.
-- Confirmar que aparece inmediatamente en Historial de Traspasos.
-- Abrir Reportes → Movimientos.
-- Confirmar que muestra `origen → destino`, cantidad, motivo y usuario.
-- Confirmar que un traslado interno no reduce falsamente el stock total del catálogo.
+## 8. Clientes y Cuenta Plaza
 
-## 7. Corte de Caja
+- Crear cliente normal.
+- Editarlo.
+- Crear locatario Plaza con crédito.
+- Hacer una venta a Cuenta Plaza.
+- Confirmar cargo, artículos, usuario y saldo.
+- Registrar un abono y verificar saldo nuevo.
 
-- Registrar venta en efectivo.
-- Registrar venta por transferencia/tarjeta.
-- Registrar venta a Cuenta Plaza.
-- Abrir Corte de Caja.
-- Confirmar que `Total vendido` incluye todas las operaciones.
-- Confirmar que `Total cobrado` NO suma lo pendiente de Cuenta Plaza.
-- Confirmar que Cuenta Plaza se muestra por separado.
+## 9. Servicio Técnico
 
-## 8. Paso a Supabase
+- Crear una orden.
+- Editarla.
+- Buscar por equipo, cliente, problema y técnico.
+- Confirmar que la búsqueda genera filas reales y nunca texto provisional como `...`.
+- Cambiar estado hasta entregado.
 
-Antes de abrir la rama sin `?demo=1`, ejecutar en Supabase SQL Editor, en este orden:
+## 10. Traspasos — prueba E2E obligatoria
 
-1. `supabase/migrations/20260818_pos_final.sql`
-2. `supabase/migrations/20260818_auth_legacy_compat.sql`
+- Seleccionar producto.
+- Elegir origen y destino distintos.
+- Capturar cantidad y motivo.
+- Registrar el traspaso.
+- Confirmar mensaje de éxito.
+- Confirmar que aparece inmediatamente en historial.
+- Reiniciar la aplicación y confirmar persistencia.
+- Con Internet, esperar sincronización y confirmar que aparece en Supabase.
+- Revisar Reportes → Movimientos.
 
-Después repetir las pruebas 2–7 con datos de prueba controlados.
+El modelo actual registra el traslado y conserva el stock total. Todavía no modela stock separado por almacén; no presentar esa parte como inventario multi-almacén terminado.
 
-## 9. Antes del merge
+## 11. Corte y reportes
 
-- Rotar los PIN/credenciales que estuvieron hardcodeados en versiones públicas anteriores.
-- Revisar RLS/policies de Supabase antes de exponer el POS fuera de una red/control local.
-- No utilizar una `service_role` key en el navegador.
-- Crear respaldo de la base de datos antes de liberar a producción.
+- Venta efectivo.
+- Venta tarjeta/transferencia.
+- Venta Cuenta Plaza.
+- Verificar total vendido, total cobrado y pendiente Plaza.
+- Revisar auditoría de altas, cambios y eliminaciones.
+
+## 12. Offline / online
+
+- Trabajar con Internet.
+- Desconectar red y crear/editar datos.
+- Cerrar y abrir el POS offline.
+- Confirmar que los datos locales siguen presentes.
+- Reconectar.
+- Esperar sincronización.
+- Confirmar que los cambios llegan a Supabase sin bloquear formularios abiertos.
+
+La descarga de snapshots de nube debe posponerse mientras haya un formulario en edición.
+
+## 13. Criterio para entregar a empleados
+
+La candidata sólo se entrega si:
+
+- supera la prueba prolongada sin congelar entradas;
+- Clientes, Productos, Inventario, Servicio, Ventas y Traspasos completan operaciones E2E;
+- persiste datos tras reinicio;
+- trabaja offline;
+- sincroniza al recuperar Internet;
+- imprime ticket y etiqueta desde el ejecutable sin pedir popups;
+- no aparecen errores JavaScript no controlados durante el recorrido;
+- existe respaldo local de SQLite.
+
+Los fallos encontrados durante el piloto se registran con módulo, hora aproximada, acción realizada y captura si aplica.
